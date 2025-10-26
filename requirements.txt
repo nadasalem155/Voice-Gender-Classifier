@@ -3,4 +3,5 @@ numpy
 librosa
 tensorflow
 matplotlib
+soundfile
 audio-recorder-streamlit
