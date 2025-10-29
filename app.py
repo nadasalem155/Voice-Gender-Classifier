@@ -100,9 +100,10 @@ if st.session_state.uploaded_path:
         except Exception as e:
             st.error(f"Error removing file: {e}")
 
-# --- Record audio section ---
+# --- Record audio section (identical layout to upload) ---
 st.subheader("🎤 Record Your Voice")
 st.markdown("Click the microphone button to record your voice from the browser.")
+
 audio_bytes = audio_recorder(key="audio_recorder")
 
 if audio_bytes:
@@ -113,7 +114,7 @@ if audio_bytes:
     with st.spinner("🎧 Analyzing your recorded voice..."):
         st.session_state.recorded_result = predict_gender(st.session_state.recorded_path)
 
-# Display recorded audio result
+# Display recorded audio result (same as upload section)
 if st.session_state.recorded_path and st.session_state.recorded_result:
     st.success(f"Prediction (Recorded): {st.session_state.recorded_result}")
 
@@ -132,7 +133,7 @@ if st.session_state.recorded_path and st.session_state.recorded_result:
 if st.session_state.recorded_path:
     if st.button("🗑️ Remove Recorded Audio", key="remove_recorded"):
         try:
-            if st.session_state.recorded_path and os.path.exists(st.session_state.recorded_path):
+            if os.path.exists(st.session_state.recorded_path):
                 os.remove(st.session_state.recorded_path)
             st.session_state.recorded_path = None
             st.session_state.recorded_result = None
