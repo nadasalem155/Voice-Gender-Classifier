@@ -50,7 +50,7 @@ for key in ["uploaded_path", "recorded_path", "uploaded_result", "recorded_resul
 
 # --- Streamlit UI ---
 st.title("🎤 Voice Gender Recognition")
-st.markdown("Detect whether a voice belongs to a *Male* or *Female* using a CNN model.")
+st.markdown("Detect whether a voice belongs to a Male or Female using a CNN model.")
 
 # ============================================================
 # === Upload audio FIRST ===
@@ -59,6 +59,16 @@ st.subheader("📂 Upload an Audio File")
 uploaded_file = st.file_uploader("Choose a file (wav, mp3, ogg) 🎧", type=["wav", "mp3", "ogg"], key="file_uploader")
 
 if uploaded_file is not None:
+    # لو المستخدم رفع ملف نمسح أي تسجيل صوتي سابق
+    if st.session_state.recorded_path:
+        try:
+            if os.path.exists(st.session_state.recorded_path):
+                os.remove(st.session_state.recorded_path)
+        except:
+            pass
+        st.session_state.recorded_path = None
+        st.session_state.recorded_result = None
+
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
         tmp_file.write(uploaded_file.read())
         st.session_state.uploaded_path = tmp_file.name
@@ -100,12 +110,22 @@ if st.session_state.uploaded_path:
 # ============================================================
 # === Record audio SECOND ===
 # ============================================================
-st.subheader("🎙️ Record Your Voice")
+st.subheader("🎙 Record Your Voice")
 st.markdown("Click the microphone button to record your voice from the browser.")
 
 audio_bytes = audio_recorder(key="audio_recorder")
 
 if audio_bytes:
+    # لو المستخدم سجل صوت نمسح أي ملف مرفوع سابق
+    if st.session_state.uploaded_path:
+        try:
+            if os.path.exists(st.session_state.uploaded_path):
+                os.remove(st.session_state.uploaded_path)
+        except:
+            pass
+        st.session_state.uploaded_path = None
+        st.session_state.uploaded_result = None
+
     st.info("🎧 Processing your voice, please wait...")
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
         tmp_file.write(audio_bytes)
