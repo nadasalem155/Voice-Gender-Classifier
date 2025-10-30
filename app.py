@@ -29,39 +29,39 @@ def preprocess_audio(filename, max_len=48000):
         spec = np.expand_dims(spec, 0)  # Add batch dim
         return spec, wav, sr
     except Exception as e:
-        st.error(f"Error processing audio: {e}")
+        st.error(f"⚠️ Error processing audio: {e}")
         return None, None, None
 
 # --- Predict gender with confidence threshold ---
 def predict_gender(file_path):
-    with st.spinner("Analyzing voice..."):
+    with st.spinner("🎧 Analyzing your voice... Please wait ⏳"):
         features, _, _ = preprocess_audio(file_path)
         if features is None:
             return None
         pred = model.predict(features, verbose=0)[0][0]
-    return "Male" if pred > 0.5 else "Female"
+    return "👨 Male" if pred > 0.5 else "👩 Female"
 
-# --- Initialize session state (only once) ---
+# --- Initialize session state ---
 for key in ["uploaded_path", "recorded_path", "uploaded_result", "recorded_result"]:
     if key not in st.session_state:
         st.session_state[key] = None
 
 # --- Streamlit UI ---
-st.title("Voice Gender Recognition")
-st.markdown("Upload or record your voice to detect **Male** or **Female** using a CNN model.")
+st.title("🎙️ Voice Gender Recognition")
+st.markdown("Upload or record your voice to detect **Male 👨** or **Female 👩** using a CNN model trained on voice spectrograms.")
 
 # ======================================================
 # === 1. Upload Audio File ===
 # ======================================================
-st.subheader("Upload Audio File")
+st.subheader("📂 Upload Audio File")
 uploaded_file = st.file_uploader(
-    "Choose .wav, .mp3, or .ogg file",
+    "🎵 Choose a .wav, .mp3, or .ogg file:",
     type=["wav", "mp3", "ogg"],
-    key="upload_widget"  # Unique key to avoid conflicts
+    key="upload_widget"
 )
 
 if uploaded_file is not None:
-    # Clear any previous recording when uploading
+    # Clear previous recording
     if st.session_state.recorded_path and os.path.exists(st.session_state.recorded_path):
         os.unlink(st.session_state.recorded_path)
     st.session_state.recorded_path = None
@@ -77,45 +77,48 @@ if uploaded_file is not None:
 
 # --- Show uploaded result ---
 if st.session_state.uploaded_path and st.session_state.uploaded_result:
-    st.success(f"**Prediction (Uploaded):** {st.session_state.uploaded_result}")
+    st.success(f"✅ **Prediction (Uploaded):** {st.session_state.uploaded_result}")
 
     spec, wav, sr = preprocess_audio(st.session_state.uploaded_path)
     if wav is not None:
         plt.figure(figsize=(8, 2))
         plt.plot(wav, color="#1f77b4")
-        plt.title("Waveform (Uploaded)")
+        plt.title("📈 Waveform (Uploaded)")
         plt.xlabel("Samples")
         plt.ylabel("Amplitude")
         plt.tight_layout()
         st.pyplot(plt)
         st.audio(st.session_state.uploaded_path, format="audio/wav")
 
-    # --- Remove uploaded file (FAST & CLEAN) ---
-    if st.button("Remove Uploaded File", key="btn_remove_upload"):
-        if st.session_state.uploaded_path and os.path.exists(st.session_state.uploaded_path):
-            os.unlink(st.session_state.uploaded_path)
-        st.session_state.uploaded_path = None
-        st.session_state.uploaded_result = None
-        st.success("Uploaded file removed!")
-        st.rerun()  # Instant refresh
+    # --- Remove uploaded file instantly ---
+    if st.button("🗑️ Remove Uploaded File", key="btn_remove_upload"):
+        try:
+            if st.session_state.uploaded_path and os.path.exists(st.session_state.uploaded_path):
+                os.unlink(st.session_state.uploaded_path)
+            st.session_state.uploaded_path = None
+            st.session_state.uploaded_result = None
+            st.success("✅ Uploaded file removed successfully!")
+            st.experimental_rerun()
+        except Exception as e:
+            st.error(f"⚠️ Failed to remove file: {e}")
 
 # ======================================================
 # === 2. Record Audio ===
 # ======================================================
-st.subheader("Record Your Voice")
-st.markdown("Click the mic and speak for 2–5 seconds.")
+st.subheader("🎤 Record Your Voice")
+st.markdown("Click the mic and speak for **2–5 seconds** 🕐")
 
 audio_bytes = audio_recorder(
-    text="Start Recording",
+    text="🎙️ Start Recording",
     recording_color="#e74c3c",
     neutral_color="#2ecc71",
     icon_name="microphone",
     icon_size="2x",
-    key="record_widget"  # Unique key
+    key="record_widget"
 )
 
 if audio_bytes:
-    # Clear any uploaded file when recording
+    # Clear previous upload
     if st.session_state.uploaded_path and os.path.exists(st.session_state.uploaded_path):
         os.unlink(st.session_state.uploaded_path)
     st.session_state.uploaded_path = None
@@ -131,28 +134,31 @@ if audio_bytes:
 
 # --- Show recorded result ---
 if st.session_state.recorded_path and st.session_state.recorded_result:
-    st.success(f"**Prediction (Recorded):** {st.session_state.recorded_result}")
+    st.success(f"✅ **Prediction (Recorded):** {st.session_state.recorded_result}")
 
     spec, wav, sr = preprocess_audio(st.session_state.recorded_path)
     if wav is not None:
         plt.figure(figsize=(8, 2))
         plt.plot(wav, color="#ff7f0e")
-        plt.title("Waveform (Recorded)")
+        plt.title("📊 Waveform (Recorded)")
         plt.xlabel("Samples")
         plt.ylabel("Amplitude")
         plt.tight_layout()
         st.pyplot(plt)
         st.audio(st.session_state.recorded_path, format="audio/wav")
 
-    # --- Remove recorded audio (FAST & FINAL) ---
-    if st.button("Remove Recorded Audio", key="btn_remove_record"):
-        if st.session_state.recorded_path and os.path.exists(st.session_state.recorded_path):
-            os.unlink(st.session_state.recorded_path)
-        st.session_state.recorded_path = None
-        st.session_state.recorded_result = None
-        st.success("Recording removed!")
-        st.rerun()
+    # --- Remove recorded audio instantly ---
+    if st.button("🗑️ Remove Recorded Audio", key="btn_remove_record"):
+        try:
+            if st.session_state.recorded_path and os.path.exists(st.session_state.recorded_path):
+                os.unlink(st.session_state.recorded_path)
+            st.session_state.recorded_path = None
+            st.session_state.recorded_result = None
+            st.success("✅ Recording removed successfully!")
+            st.experimental_rerun()
+        except Exception as e:
+            st.error(f"⚠️ Failed to remove recording: {e}")
 
 # --- Footer ---
 st.markdown("---")
-st.caption("Powered by Streamlit • Model: CNN on STFT Spectrograms")
+st.caption("💡 Powered by Streamlit • 🧠 Model: CNN trained on STFT Spectrograms")
