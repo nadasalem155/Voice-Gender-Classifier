@@ -6,6 +6,7 @@ import librosa
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from audio_recorder_streamlit import audio_recorder
+import time
 
 # --- Load Keras model once ---
 @st.cache_resource
@@ -61,7 +62,7 @@ uploaded_file = st.file_uploader(
 
 if uploaded_file is not None:
     if st.session_state.recorded_path and os.path.exists(st.session_state.recorded_path):
-        os.unlink(st.session_state.recorded_path)
+        os.remove(st.session_state.recorded_path)
     st.session_state.recorded_path = None
     st.session_state.recorded_result = None
 
@@ -86,14 +87,18 @@ if st.session_state.uploaded_path and st.session_state.uploaded_result:
             st.pyplot(plt)
             st.audio(st.session_state.uploaded_path, format="audio/wav")
 
+    # ✅ تعديل جزء الريموف هنا
     if st.button("🗑 Remove Uploaded File", key="btn_remove_upload"):
         try:
             if st.session_state.uploaded_path and os.path.exists(st.session_state.uploaded_path):
-                os.unlink(st.session_state.uploaded_path)
+                os.remove(st.session_state.uploaded_path)
             st.session_state.uploaded_path = None
             st.session_state.uploaded_result = None
-            st.session_state["refresh"] = not st.session_state.get("refresh", False)
+            if "upload_widget" in st.session_state:
+                del st.session_state["upload_widget"]
             st.success("✅ Uploaded file removed successfully!")
+            time.sleep(0.1)
+            st.rerun()
         except Exception as e:
             st.error(f"⚠ Failed to remove file: {e}")
         st.stop()
@@ -115,7 +120,7 @@ audio_bytes = audio_recorder(
 
 if audio_bytes:
     if st.session_state.uploaded_path and os.path.exists(st.session_state.uploaded_path):
-        os.unlink(st.session_state.uploaded_path)
+        os.remove(st.session_state.uploaded_path)
     st.session_state.uploaded_path = None
     st.session_state.uploaded_result = None
 
@@ -140,14 +145,18 @@ if st.session_state.recorded_path and st.session_state.recorded_result:
             st.pyplot(plt)
             st.audio(st.session_state.recorded_path, format="audio/wav")
 
+    # ✅ تعديل جزء الريموف هنا برضو
     if st.button("🗑 Remove Recorded Audio", key="btn_remove_record"):
         try:
             if st.session_state.recorded_path and os.path.exists(st.session_state.recorded_path):
-                os.unlink(st.session_state.recorded_path)
+                os.remove(st.session_state.recorded_path)
             st.session_state.recorded_path = None
             st.session_state.recorded_result = None
-            st.session_state["refresh"] = not st.session_state.get("refresh", False)
+            if "record_widget" in st.session_state:
+                del st.session_state["record_widget"]
             st.success("✅ Recording removed successfully!")
+            time.sleep(0.1)
+            st.rerun()
         except Exception as e:
             st.error(f"⚠ Failed to remove recording: {e}")
         st.stop()
