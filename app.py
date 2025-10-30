@@ -15,7 +15,7 @@ def load_model():
 
 model = load_model()
 
-# --- Preprocess ---
+# --- Audio preprocessing ---
 def preprocess_audio(filename, max_len=48000):
     try:
         wav, sr = librosa.load(filename, sr=16000, mono=True)
@@ -32,7 +32,7 @@ def preprocess_audio(filename, max_len=48000):
         st.error(f"⚠ Error processing audio: {e}")
         return None, None, None
 
-# --- Predict ---
+# --- Gender prediction ---
 def predict_gender(file_path):
     with st.spinner("🎧 Analyzing your voice... Please wait ⏳"):
         features, _, _ = preprocess_audio(file_path)
@@ -41,17 +41,17 @@ def predict_gender(file_path):
         pred = model.predict(features, verbose=0)[0][0]
     return "👨 Male" if pred > 0.5 else "👩 Female"
 
-# --- Session state ---
+# --- Initialize session state ---
 for key in ["uploaded_path", "recorded_path", "uploaded_result", "recorded_result"]:
     if key not in st.session_state:
         st.session_state[key] = None
 
-# --- UI ---
+# --- UI Header ---
 st.title("🎙 Voice Gender Recognition")
 st.markdown("Upload or record your voice to detect *Male 👨* or *Female 👩* using a CNN model.")
 
 # ======================================================
-# === 1. Upload ===
+# === 1. Upload Section ===
 # ======================================================
 st.subheader("📂 Upload Audio File")
 uploaded_file = st.file_uploader(
@@ -61,15 +61,18 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file is not None:
+    # Clear any previous recording
     if st.session_state.recorded_path and os.path.exists(st.session_state.recorded_path):
         os.remove(st.session_state.recorded_path)
     st.session_state.recorded_path = None
     st.session_state.recorded_result = None
 
+    # Save uploaded file temporarily
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
         tmp.write(uploaded_file.read())
         st.session_state.uploaded_path = tmp.name
 
+    # Predict gender
     st.session_state.uploaded_result = predict_gender(st.session_state.uploaded_path)
 
 if st.session_state.uploaded_path and st.session_state.uploaded_result:
@@ -87,7 +90,7 @@ if st.session_state.uploaded_path and st.session_state.uploaded_result:
             st.pyplot(plt)
             st.audio(st.session_state.uploaded_path, format="audio/wav")
 
-    # ✅ تعديل جزء الريموف هنا
+    # --- Remove uploaded file ---
     if st.button("🗑 Remove Uploaded File", key="btn_remove_upload"):
         try:
             if st.session_state.uploaded_path and os.path.exists(st.session_state.uploaded_path):
@@ -104,33 +107,35 @@ if st.session_state.uploaded_path and st.session_state.uploaded_result:
         st.stop()
 
 # ======================================================
-# === 2. Record ===
+# === 2. Recording Section ===
 # ======================================================
 st.subheader("🎤 Record Your Voice")
 st.markdown("Click the mic and speak for *2–5 seconds* 🕐")
 
 audio_bytes = audio_recorder(
     text="🎙 Start Recording",
-    recording_color="#8e44ad",  # 💜 Purple color
-    neutral_color="#2c3e50",    # 🖤 Black/Dark gray
+    recording_color="#8e44ad",  # 💜 Purple while recording
+    neutral_color="#2c3e50",    # 🖤 Black when idle
     icon_name="microphone",
     icon_size="2x",
     key="record_widget"
 )
 
 if audio_bytes:
+    # Clear uploaded audio if it exists
     if st.session_state.uploaded_path and os.path.exists(st.session_state.uploaded_path):
         os.remove(st.session_state.uploaded_path)
     st.session_state.uploaded_path = None
     st.session_state.uploaded_result = None
 
+    # Save recording temporarily
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
         tmp.write(audio_bytes)
         st.session_state.recorded_path = tmp.name
 
-    # ✅ إضافة الرسالة المؤقتة قبل التحليل
+    # Display temporary spinner before prediction
     with st.spinner("🎧 Analyzing your voice... Please wait ⏳"):
-        time.sleep(1.5)  # مؤقت بسيط عشان المستخدم يحس بالتحليل
+        time.sleep(1.5)
         st.session_state.recorded_result = predict_gender(st.session_state.recorded_path)
 
 if st.session_state.recorded_path and st.session_state.recorded_result:
@@ -148,21 +153,26 @@ if st.session_state.recorded_path and st.session_state.recorded_result:
             st.pyplot(plt)
             st.audio(st.session_state.recorded_path, format="audio/wav")
 
-    # ✅ تعديل جزء الريموف هنا برضو
+    # --- Remove recorded audio (fixed smooth refresh) ---
     if st.button("🗑 Remove Recorded Audio", key="btn_remove_record"):
         try:
             if st.session_state.recorded_path and os.path.exists(st.session_state.recorded_path):
                 os.remove(st.session_state.recorded_path)
+
+            # Clear only recording-related session data
             st.session_state.recorded_path = None
             st.session_state.recorded_result = None
+
             if "record_widget" in st.session_state:
                 del st.session_state["record_widget"]
+
+            # Show success message
             st.success("✅ Recording removed successfully!")
-            time.sleep(0.1)
-            st.rerun()
+
+            # Safe soft refresh
+            st.experimental_set_query_params(refresh=str(time.time()))
         except Exception as e:
             st.error(f"⚠ Failed to remove recording: {e}")
-        st.stop()
 
 # --- Footer ---
 st.markdown("---")
