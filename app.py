@@ -111,8 +111,8 @@ st.markdown("Click the mic and speak for *2–5 seconds* 🕐")
 
 audio_bytes = audio_recorder(
     text="🎙 Start Recording",
-    recording_color="#e74c3c",
-    neutral_color="#2ecc71",
+    recording_color="#8e44ad",  # 💜 Purple color
+    neutral_color="#2c3e50",    # 🖤 Black/Dark gray
     icon_name="microphone",
     icon_size="2x",
     key="record_widget"
@@ -128,7 +128,10 @@ if audio_bytes:
         tmp.write(audio_bytes)
         st.session_state.recorded_path = tmp.name
 
-    st.session_state.recorded_result = predict_gender(st.session_state.recorded_path)
+    # ✅ إضافة الرسالة المؤقتة قبل التحليل
+    with st.spinner("🎧 Analyzing your voice... Please wait ⏳"):
+        time.sleep(1.5)  # مؤقت بسيط عشان المستخدم يحس بالتحليل
+        st.session_state.recorded_result = predict_gender(st.session_state.recorded_path)
 
 if st.session_state.recorded_path and st.session_state.recorded_result:
     st.success(f"✅ *Prediction (Recorded):* {st.session_state.recorded_result}")
