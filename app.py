@@ -98,7 +98,7 @@ if st.session_state.uploaded_path and st.session_state.uploaded_result:
             st.session_state.uploaded_path = None
             st.session_state.uploaded_result = None
             st.success("✅ Uploaded file removed successfully!")
-            st.experimental_rerun()
+            st.rerun()
         except Exception as e:
             st.error(f"⚠️ Failed to remove file: {e}")
 
@@ -155,7 +155,7 @@ if st.session_state.recorded_path and st.session_state.recorded_result:
             st.session_state.recorded_path = None
             st.session_state.recorded_result = None
             st.success("✅ Recording removed successfully!")
-            st.experimental_rerun()
+            st.rerun()
         except Exception as e:
             st.error(f"⚠️ Failed to remove recording: {e}")
 
