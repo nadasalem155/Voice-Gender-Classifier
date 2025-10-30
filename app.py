@@ -86,15 +86,14 @@ if st.session_state.uploaded_path and st.session_state.uploaded_result:
             st.pyplot(plt)
             st.audio(st.session_state.uploaded_path, format="audio/wav")
 
-    # ✅ Fixed deletion logic
     if st.button("🗑 Remove Uploaded File", key="btn_remove_upload"):
         try:
             if st.session_state.uploaded_path and os.path.exists(st.session_state.uploaded_path):
                 os.unlink(st.session_state.uploaded_path)
             st.session_state.uploaded_path = None
             st.session_state.uploaded_result = None
+            st.session_state["refresh"] = not st.session_state.get("refresh", False)
             st.success("✅ Uploaded file removed successfully!")
-            st.rerun()
         except Exception as e:
             st.error(f"⚠ Failed to remove file: {e}")
         st.stop()
@@ -141,15 +140,14 @@ if st.session_state.recorded_path and st.session_state.recorded_result:
             st.pyplot(plt)
             st.audio(st.session_state.recorded_path, format="audio/wav")
 
-    # ✅ Fixed deletion logic
     if st.button("🗑 Remove Recorded Audio", key="btn_remove_record"):
         try:
             if st.session_state.recorded_path and os.path.exists(st.session_state.recorded_path):
                 os.unlink(st.session_state.recorded_path)
             st.session_state.recorded_path = None
             st.session_state.recorded_result = None
+            st.session_state["refresh"] = not st.session_state.get("refresh", False)
             st.success("✅ Recording removed successfully!")
-            st.rerun()
         except Exception as e:
             st.error(f"⚠ Failed to remove recording: {e}")
         st.stop()
