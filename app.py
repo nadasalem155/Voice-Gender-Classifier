@@ -28,7 +28,7 @@ def preprocess_audio(filename, max_len=48000):
         spec = np.expand_dims(spec, 0)
         return spec, wav, sr
     except Exception as e:
-        st.error(f"⚠️ Error processing audio: {e}")
+        st.error(f"⚠ Error processing audio: {e}")
         return None, None, None
 
 # --- Predict ---
@@ -46,8 +46,8 @@ for key in ["uploaded_path", "recorded_path", "uploaded_result", "recorded_resul
         st.session_state[key] = None
 
 # --- UI ---
-st.title("🎙️ Voice Gender Recognition")
-st.markdown("Upload or record your voice to detect **Male 👨** or **Female 👩** using a CNN model.")
+st.title("🎙 Voice Gender Recognition")
+st.markdown("Upload or record your voice to detect *Male 👨* or *Female 👩* using a CNN model.")
 
 # ======================================================
 # === 1. Upload ===
@@ -72,7 +72,7 @@ if uploaded_file is not None:
     st.session_state.uploaded_result = predict_gender(st.session_state.uploaded_path)
 
 if st.session_state.uploaded_path and st.session_state.uploaded_result:
-    st.success(f"✅ **Prediction (Uploaded):** {st.session_state.uploaded_result}")
+    st.success(f"✅ *Prediction (Uploaded):* {st.session_state.uploaded_result}")
 
     if os.path.exists(st.session_state.uploaded_path):
         spec, wav, sr = preprocess_audio(st.session_state.uploaded_path)
@@ -86,25 +86,27 @@ if st.session_state.uploaded_path and st.session_state.uploaded_result:
             st.pyplot(plt)
             st.audio(st.session_state.uploaded_path, format="audio/wav")
 
-    if st.button("🗑️ Remove Uploaded File", key="btn_remove_upload"):
+    # ✅ Fixed deletion logic
+    if st.button("🗑 Remove Uploaded File", key="btn_remove_upload"):
         try:
             if st.session_state.uploaded_path and os.path.exists(st.session_state.uploaded_path):
                 os.unlink(st.session_state.uploaded_path)
-            st.session_state.clear()
+            st.session_state.uploaded_path = None
+            st.session_state.uploaded_result = None
             st.success("✅ Uploaded file removed successfully!")
             st.rerun()
         except Exception as e:
-            st.error(f"⚠️ Failed to remove file: {e}")
+            st.error(f"⚠ Failed to remove file: {e}")
         st.stop()
 
 # ======================================================
 # === 2. Record ===
 # ======================================================
 st.subheader("🎤 Record Your Voice")
-st.markdown("Click the mic and speak for **2–5 seconds** 🕐")
+st.markdown("Click the mic and speak for *2–5 seconds* 🕐")
 
 audio_bytes = audio_recorder(
-    text="🎙️ Start Recording",
+    text="🎙 Start Recording",
     recording_color="#e74c3c",
     neutral_color="#2ecc71",
     icon_name="microphone",
@@ -125,7 +127,7 @@ if audio_bytes:
     st.session_state.recorded_result = predict_gender(st.session_state.recorded_path)
 
 if st.session_state.recorded_path and st.session_state.recorded_result:
-    st.success(f"✅ **Prediction (Recorded):** {st.session_state.recorded_result}")
+    st.success(f"✅ *Prediction (Recorded):* {st.session_state.recorded_result}")
 
     if os.path.exists(st.session_state.recorded_path):
         spec, wav, sr = preprocess_audio(st.session_state.recorded_path)
@@ -139,15 +141,17 @@ if st.session_state.recorded_path and st.session_state.recorded_result:
             st.pyplot(plt)
             st.audio(st.session_state.recorded_path, format="audio/wav")
 
-    if st.button("🗑️ Remove Recorded Audio", key="btn_remove_record"):
+    # ✅ Fixed deletion logic
+    if st.button("🗑 Remove Recorded Audio", key="btn_remove_record"):
         try:
             if st.session_state.recorded_path and os.path.exists(st.session_state.recorded_path):
                 os.unlink(st.session_state.recorded_path)
-            st.session_state.clear()
+            st.session_state.recorded_path = None
+            st.session_state.recorded_result = None
             st.success("✅ Recording removed successfully!")
             st.rerun()
         except Exception as e:
-            st.error(f"⚠️ Failed to remove recording: {e}")
+            st.error(f"⚠ Failed to remove recording: {e}")
         st.stop()
 
 # --- Footer ---
