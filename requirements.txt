@@ -1,7 +1,9 @@
 streamlit
+tempfile
 numpy
 librosa
 tensorflow
 matplotlib
 soundfile
 audio-recorder-streamlit
+time
