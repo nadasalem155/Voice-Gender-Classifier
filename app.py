@@ -91,7 +91,6 @@ tab1, tab2 = st.tabs(["📂 Upload Audio", "🎤 Record Voice"])
 with tab1:
     st.subheader("Upload Audio File")
     
-    # ملف جديد تم رفعه
     uploaded_file = st.file_uploader(
         "Choose a .wav, .mp3, or .ogg file:",
         type=["wav", "mp3", "ogg"],
@@ -99,13 +98,11 @@ with tab1:
     )
 
     if uploaded_file is not None:
-        # تنظيف التسجيلات السابقة
         if st.session_state.recorded_path:
             cleanup_file(st.session_state.recorded_path)
             st.session_state.recorded_path = None
             st.session_state.recorded_result = None
 
-        # حفظ الملف مؤقتاً إذا كان جديداً
         if st.session_state.current_file != uploaded_file.name:
             temp_path = tempfile.NamedTemporaryFile(delete=False, suffix=".wav").name
             with open(temp_path, "wb") as f:
@@ -113,11 +110,8 @@ with tab1:
             
             st.session_state.uploaded_path = temp_path
             st.session_state.current_file = uploaded_file.name
-            
-            # التنبؤ
             st.session_state.uploaded_result = predict_gender(temp_path)
 
-    # عرض النتائج للملف المرفوع
     if st.session_state.uploaded_path and st.session_state.uploaded_result:
         st.success(f"**Prediction (Uploaded):** {st.session_state.uploaded_result}")
 
@@ -138,23 +132,19 @@ with tab1:
                 with col2:
                     st.audio(st.session_state.uploaded_path, format="audio/wav")
 
-        # زر المسح - باستخدام callback
         if st.button("🗑 Remove Uploaded File", key="btn_remove_upload"):
             if cleanup_file(st.session_state.uploaded_path):
                 st.session_state.uploaded_path = None
                 st.session_state.uploaded_result = None
                 st.session_state.current_file = None
                 st.success("✅ Uploaded file removed successfully!")
-                time.sleep(1)
-                st.experimental_rerun()
-            else:
-                st.error("⚠ Failed to remove file")
+                time.sleep(0.5)
+                st.rerun()
 
 with tab2:
     st.subheader("Record Your Voice")
     st.markdown("Click the mic and speak for **2-5 seconds** 🕐")
 
-    # التسجيل الصوتي
     audio_bytes = audio_recorder(
         text="🎙️ Start Recording",
         recording_color="#e74c3c",
@@ -165,24 +155,19 @@ with tab2:
     )
 
     if audio_bytes and st.session_state.audio_bytes_processed != audio_bytes:
-        # تنظيف الملفات المرفوعة السابقة
         if st.session_state.uploaded_path:
             cleanup_file(st.session_state.uploaded_path)
             st.session_state.uploaded_path = None
             st.session_state.uploaded_result = None
 
-        # حفظ التسجيل
         temp_path = tempfile.NamedTemporaryFile(delete=False, suffix=".wav").name
         with open(temp_path, "wb") as f:
             f.write(audio_bytes)
         
         st.session_state.recorded_path = temp_path
         st.session_state.audio_bytes_processed = audio_bytes
-        
-        # التنبؤ
         st.session_state.recorded_result = predict_gender(temp_path)
 
-    # عرض النتائج للتسجيل
     if st.session_state.recorded_path and st.session_state.recorded_result:
         st.success(f"**Prediction (Recorded):** {st.session_state.recorded_result}")
 
@@ -203,26 +188,21 @@ with tab2:
                 with col2:
                     st.audio(st.session_state.recorded_path, format="audio/wav")
 
-        # زر مسح التسجيل
         if st.button("🗑 Remove Recorded Audio", key="btn_remove_record"):
             if cleanup_file(st.session_state.recorded_path):
                 st.session_state.recorded_path = None
                 st.session_state.recorded_result = None
                 st.session_state.audio_bytes_processed = None
                 st.success("✅ Recording removed successfully!")
-                time.sleep(1)
-                st.experimental_rerun()
-            else:
-                st.error("⚠ Failed to remove recording")
+                time.sleep(0.5)
+                st.rerun()
 
 # زر مسح الكل
 st.markdown("---")
 if st.button("🗑 Clear All Files", type="secondary", key="btn_clear_all"):
-    # مسح جميع الملفات
     cleanup_file(st.session_state.uploaded_path)
     cleanup_file(st.session_state.recorded_path)
     
-    # إعادة تعيين جميع الحالات
     st.session_state.uploaded_path = None
     st.session_state.recorded_path = None
     st.session_state.uploaded_result = None
@@ -231,8 +211,8 @@ if st.button("🗑 Clear All Files", type="secondary", key="btn_clear_all"):
     st.session_state.audio_bytes_processed = None
     
     st.success("✅ All files cleared successfully!")
-    time.sleep(1)
-    st.experimental_rerun()
+    time.sleep(0.5)
+    st.rerun()
 
 # الفوتر
 st.markdown("---")
