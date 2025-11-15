@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from audio_recorder_streamlit import audio_recorder
 import time
 
-# إعداد صفحة Streamlit
+# إعداد صفحة Streamlit لتحسين الأداء
 st.set_page_config(
     page_title="Voice Gender Recognition",
     page_icon="🎙️",
@@ -16,36 +16,16 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- حل بديل لتحميل النموذج ---
+# --- Load Keras model once ---
 @st.cache_resource
 def load_model():
     try:
-        # المحاولة الأولى: تحميل النموذج الموجود
         model = tf.keras.models.load_model("gender_voice_model.keras", compile=False)
         st.success("✅ Model loaded successfully!")
         return model
     except Exception as e:
-        st.warning("⚠ Original model not found. Creating a dummy model for testing...")
-        
-        # إنشاء نموذج بديل للاختبار فقط
-        try:
-            # نموذج بسيط للاختبار
-            model = tf.keras.Sequential([
-                tf.keras.layers.InputLayer(input_shape=(128, 128, 1)),
-                tf.keras.layers.Flatten(),
-                tf.keras.layers.Dense(64, activation='relu'),
-                tf.keras.layers.Dense(1, activation='sigmoid')
-            ])
-            
-            # تجميع النموذج
-            model.compile(optimizer='adam', loss='binary_crossentropy')
-            # وضع علامة أن هذا نموذج تجريبي
-            model._is_demo = True
-            st.info("🔧 Using demo model - predictions are random for testing")
-            return model
-        except Exception as e2:
-            st.error(f"❌ Failed to create demo model: {e2}")
-            return None
+        st.error(f"❌ Failed to load model: {e}")
+        return None
 
 model = load_model()
 
@@ -69,36 +49,23 @@ def preprocess_audio(filename, max_len=48000):
 # --- Gender prediction ---
 def predict_gender(file_path):
     if model is None:
-        st.error("❌ Model not available.")
+        st.error("❌ Model not available. Please check if the model file exists.")
         return None
         
     with st.spinner("🎧 Analyzing your voice... Please wait ⏳"):
         features, _, _ = preprocess_audio(file_path)
         if features is None:
             return None
-        
-        # إذا كان النموذج تجريبي، استخدم تنبؤات عشوائية للاختبار
-        try:
-            pred = model.predict(features, verbose=0)[0][0]
-            # إذا كان النموذج تجريبي، اجعل التنبؤات أكثر واقعية
-            if hasattr(model, '_is_demo') and model._is_demo:
-                # محاكاة تنبؤات واقعية بناءً على خصائص الصوت
-                import random
-                pred = random.uniform(0.3, 0.7)
-        except:
-            # في حالة الفشل، استخدم تنبؤ عشوائي
-            import random
-            pred = random.uniform(0.3, 0.7)
-            
+        pred = model.predict(features, verbose=0)[0][0]
     return "👨 Male" if pred > 0.5 else "👩 Female"
 
 # --- Initialize session state ---
 def init_session_state():
-    session_keys = [
+    keys = [
         "uploaded_path", "recorded_path", "uploaded_result", "recorded_result",
         "remove_uploaded", "remove_recorded", "clear_all"
     ]
-    for key in session_keys:
+    for key in keys:
         if key not in st.session_state:
             st.session_state[key] = None
 
@@ -106,7 +73,6 @@ init_session_state()
 
 # --- Cleanup temporary files ---
 def cleanup_files():
-    # تنظيف الملفات المؤقتة
     files_to_remove = []
     
     if st.session_state.uploaded_path and os.path.exists(st.session_state.uploaded_path):
@@ -118,18 +84,12 @@ def cleanup_files():
     for file_path in files_to_remove:
         try:
             os.remove(file_path)
-        except Exception as e:
-            st.error(f"⚠ Error removing file {file_path}: {e}")
-    
-    # إعادة تعيين حالة الجلسة
-    st.session_state.uploaded_path = None
-    st.session_state.recorded_path = None
-    st.session_state.uploaded_result = None
-    st.session_state.recorded_result = None
+        except:
+            pass
 
 # --- Handle remove actions ---
 def handle_remove_actions():
-    # معالجة إزالة الملف المرفوع
+    # Handle uploaded file removal
     if st.session_state.remove_uploaded:
         if st.session_state.uploaded_path and os.path.exists(st.session_state.uploaded_path):
             try:
@@ -141,8 +101,10 @@ def handle_remove_actions():
         st.session_state.uploaded_path = None
         st.session_state.uploaded_result = None
         st.session_state.remove_uploaded = False
+        time.sleep(0.5)
+        st.rerun()
     
-    # معالجة إزالة التسجيل
+    # Handle recorded audio removal
     if st.session_state.remove_recorded:
         if st.session_state.recorded_path and os.path.exists(st.session_state.recorded_path):
             try:
@@ -154,22 +116,26 @@ def handle_remove_actions():
         st.session_state.recorded_path = None
         st.session_state.recorded_result = None
         st.session_state.remove_recorded = False
+        time.sleep(0.5)
+        st.rerun()
     
-    # معالجة مسح الكل
+    # Handle clear all
     if st.session_state.clear_all:
         cleanup_files()
+        st.session_state.uploaded_path = None
+        st.session_state.recorded_path = None
+        st.session_state.uploaded_result = None
+        st.session_state.recorded_result = None
         st.success("✅ All files cleared successfully!")
         st.session_state.clear_all = False
+        time.sleep(0.5)
+        st.rerun()
 
 # --- UI Header ---
-st.title("🎙 Voice Gender Recognition")
+st.title("🎙️ Voice Gender Recognition")
 st.markdown("Upload or record your voice to detect **Male 👨** or **Female 👩** using a CNN model.")
 
-# تحذير إذا كان النموذج تجريبي
-if model and hasattr(model, '_is_demo') and model._is_demo:
-    st.warning("🔧 **Demo Mode**: Using test model with random predictions. For accurate results, please add 'gender_voice_model.keras' to your project directory.")
-
-# معالجة إجراءات الإزالة أولاً
+# Handle remove actions first
 handle_remove_actions()
 
 # استخدام علامات تبويب لتقسيم الواجهة
@@ -205,7 +171,7 @@ with tab1:
         st.session_state.uploaded_result = predict_gender(st.session_state.uploaded_path)
         st.rerun()
 
-    # عرض النتائج والتحكم في الملف المرفوع
+    # Display results for uploaded file
     if st.session_state.uploaded_path and st.session_state.uploaded_result:
         st.success(f"**Prediction (Uploaded):** {st.session_state.uploaded_result}")
 
@@ -229,7 +195,6 @@ with tab1:
         # --- Remove uploaded file ---
         if st.button("🗑 Remove Uploaded File", key="btn_remove_upload"):
             st.session_state.remove_uploaded = True
-            st.rerun()
 
 with tab2:
     # ======================================================
@@ -239,7 +204,7 @@ with tab2:
     st.markdown("Click the mic and speak for **2-5 seconds** 🕐")
 
     audio_bytes = audio_recorder(
-        text="🎙 Start Recording",
+        text="🎙️ Start Recording",
         recording_color="#e74c3c",
         neutral_color="#2c3e50",
         icon_name="microphone",
@@ -266,7 +231,7 @@ with tab2:
         st.session_state.recorded_result = predict_gender(st.session_state.recorded_path)
         st.rerun()
 
-    # عرض النتائج والتحكم في التسجيل
+    # Display results for recorded audio
     if st.session_state.recorded_path and st.session_state.recorded_result:
         st.success(f"**Prediction (Recorded):** {st.session_state.recorded_result}")
 
@@ -290,65 +255,28 @@ with tab2:
         # --- Remove recorded audio ---
         if st.button("🗑 Remove Recorded Audio", key="btn_remove_record"):
             st.session_state.remove_recorded = True
-            st.rerun()
 
 # --- Clear All Button ---
 st.markdown("---")
 if st.button("🗑 Clear All Files", type="secondary", key="btn_clear_all"):
     st.session_state.clear_all = True
-    st.rerun()
-
-# --- إضافة قسم لتحميل النموذج يدوياً ---
-st.markdown("---")
-with st.expander("🔧 Model Management"):
-    st.subheader("Upload Your Model")
-    st.markdown("If you have a trained model file, upload it here:")
-    
-    model_file = st.file_uploader(
-        "Upload gender_voice_model.keras",
-        type=["keras", "h5"],
-        key="model_uploader"
-    )
-    
-    if model_file is not None:
-        try:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".keras") as tmp_model:
-                tmp_model.write(model_file.read())
-                uploaded_model_path = tmp_model.name
-            
-            # تحميل النموذج المرفوع
-            new_model = tf.keras.models.load_model(uploaded_model_path, compile=False)
-            model = new_model
-            st.success("✅ Custom model loaded successfully!")
-            
-            # تنظيف الملف المؤقت
-            os.unlink(uploaded_model_path)
-            
-        except Exception as e:
-            st.error(f"❌ Failed to load uploaded model: {e}")
 
 # --- Footer ---
 st.markdown("---")
 st.caption("💡 Powered by Streamlit • 🧠 Model: CNN trained on STFT Spectrograms")
 
-# تنظيف الملفات المؤقتة عند إعادة التحميل
-if st.button("🔄 Refresh App", key="btn_refresh"):
-    cleanup_files()
-    st.rerun()
+# تنظيف الملفات المؤقتة عند إغلاق التطبيق
+import atexit
+atexit.register(cleanup_files)
 
-# حل بديل إذا استمرت مشاكل الريموف
+# حل إضافي للمشاكل المستعصية
 st.markdown("---")
-with st.expander("Troubleshooting"):
-    st.subheader("إذا واجهت مشاكل في إزالة الملفات:")
+with st.expander("🛠️ Troubleshooting Section"):
+    st.write("إذا استمرت مشاكل المسح، جرب:")
     
-    if st.button("Force Clear All Session Data", type="secondary"):
+    if st.button("🔄 Force Refresh App"):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
-        st.success("✅ All session data cleared!")
+        st.success("✅ App refreshed successfully!")
         time.sleep(1)
         st.experimental_rerun()
-
-    # عرض حالة الجلسة للت debugging
-    st.write("Current session state:")
-    for key, value in st.session_state.items():
-        st.write(f"{key}: {value}")
