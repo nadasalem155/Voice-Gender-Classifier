@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from audio_recorder_streamlit import audio_recorder
 import time
 
-# إعداد صفحة Streamlit لتحسين الأداء
+# إعداد صفحة Streamlit
 st.set_page_config(
     page_title="Voice Gender Recognition",
     page_icon="🎙️",
@@ -61,8 +61,9 @@ def predict_gender(file_path):
 # --- Initialize session state ---
 def init_session_state():
     keys = [
-        "uploaded_path", "recorded_path", "uploaded_result", "recorded_result",
-        "show_uploaded", "show_recorded", "file_processed"
+        "uploaded_path", "recorded_path", 
+        "uploaded_result", "recorded_result",
+        "current_file", "audio_bytes_processed"
     ]
     for key in keys:
         if key not in st.session_state:
@@ -70,64 +71,54 @@ def init_session_state():
 
 init_session_state()
 
-# --- Cleanup temporary files ---
-def cleanup_files():
-    files_to_remove = []
-    
-    if st.session_state.uploaded_path and os.path.exists(st.session_state.uploaded_path):
-        files_to_remove.append(st.session_state.uploaded_path)
-    
-    if st.session_state.recorded_path and os.path.exists(st.session_state.recorded_path):
-        files_to_remove.append(st.session_state.recorded_path)
-    
-    for file_path in files_to_remove:
+# --- Cleanup function ---
+def cleanup_file(file_path):
+    if file_path and os.path.exists(file_path):
         try:
             os.remove(file_path)
+            return True
         except:
-            pass
+            return False
+    return True
 
 # --- UI Header ---
 st.title("🎙️ Voice Gender Recognition")
 st.markdown("Upload or record your voice to detect **Male 👨** or **Female 👩** using a CNN model.")
 
-# استخدام علامات تبويب لتقسيم الواجهة
+# استخدام علامات تبويب
 tab1, tab2 = st.tabs(["📂 Upload Audio", "🎤 Record Voice"])
 
 with tab1:
-    # ======================================================
-    # === 1. Upload Section ===
-    # ======================================================
     st.subheader("Upload Audio File")
+    
+    # ملف جديد تم رفعه
     uploaded_file = st.file_uploader(
         "Choose a .wav, .mp3, or .ogg file:",
         type=["wav", "mp3", "ogg"],
         key="upload_widget"
     )
 
-    # معالجة الملف المرفوع فقط إذا كان جديداً
-    if uploaded_file is not None and st.session_state.file_processed != uploaded_file.name:
-        # Clear any previous recording
-        if st.session_state.recorded_path and os.path.exists(st.session_state.recorded_path):
-            try:
-                os.remove(st.session_state.recorded_path)
-            except:
-                pass
+    if uploaded_file is not None:
+        # تنظيف التسجيلات السابقة
+        if st.session_state.recorded_path:
+            cleanup_file(st.session_state.recorded_path)
             st.session_state.recorded_path = None
             st.session_state.recorded_result = None
-            st.session_state.show_recorded = None
 
-        # Save uploaded file temporarily
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-            tmp.write(uploaded_file.read())
-            st.session_state.uploaded_path = tmp.name
+        # حفظ الملف مؤقتاً إذا كان جديداً
+        if st.session_state.current_file != uploaded_file.name:
+            temp_path = tempfile.NamedTemporaryFile(delete=False, suffix=".wav").name
+            with open(temp_path, "wb") as f:
+                f.write(uploaded_file.read())
+            
+            st.session_state.uploaded_path = temp_path
+            st.session_state.current_file = uploaded_file.name
+            
+            # التنبؤ
+            st.session_state.uploaded_result = predict_gender(temp_path)
 
-        # Predict gender
-        st.session_state.uploaded_result = predict_gender(st.session_state.uploaded_path)
-        st.session_state.show_uploaded = True
-        st.session_state.file_processed = uploaded_file.name
-
-    # Display results for uploaded file
-    if st.session_state.show_uploaded and st.session_state.uploaded_result:
+    # عرض النتائج للملف المرفوع
+    if st.session_state.uploaded_path and st.session_state.uploaded_result:
         st.success(f"**Prediction (Uploaded):** {st.session_state.uploaded_result}")
 
         if os.path.exists(st.session_state.uploaded_path):
@@ -147,29 +138,23 @@ with tab1:
                 with col2:
                     st.audio(st.session_state.uploaded_path, format="audio/wav")
 
-        # --- Remove uploaded file ---
-        col1, col2 = st.columns([1, 3])
-        with col1:
-            if st.button("🗑 Remove Uploaded File", key="btn_remove_upload"):
-                if st.session_state.uploaded_path and os.path.exists(st.session_state.uploaded_path):
-                    try:
-                        os.remove(st.session_state.uploaded_path)
-                    except Exception as e:
-                        st.error(f"⚠ Failed to remove file: {e}")
-                
+        # زر المسح - باستخدام callback
+        if st.button("🗑 Remove Uploaded File", key="btn_remove_upload"):
+            if cleanup_file(st.session_state.uploaded_path):
                 st.session_state.uploaded_path = None
                 st.session_state.uploaded_result = None
-                st.session_state.show_uploaded = None
-                st.session_state.file_processed = None
-                st.rerun()
+                st.session_state.current_file = None
+                st.success("✅ Uploaded file removed successfully!")
+                time.sleep(1)
+                st.experimental_rerun()
+            else:
+                st.error("⚠ Failed to remove file")
 
 with tab2:
-    # ======================================================
-    # === 2. Recording Section ===
-    # ======================================================
     st.subheader("Record Your Voice")
     st.markdown("Click the mic and speak for **2-5 seconds** 🕐")
 
+    # التسجيل الصوتي
     audio_bytes = audio_recorder(
         text="🎙️ Start Recording",
         recording_color="#e74c3c",
@@ -179,30 +164,26 @@ with tab2:
         key="record_widget"
     )
 
-    # معالجة التسجيل فقط إذا كان جديداً
-    if audio_bytes and st.session_state.file_processed != "recorded_audio":
-        # Clear uploaded audio if it exists
-        if st.session_state.uploaded_path and os.path.exists(st.session_state.uploaded_path):
-            try:
-                os.remove(st.session_state.uploaded_path)
-            except:
-                pass
+    if audio_bytes and st.session_state.audio_bytes_processed != audio_bytes:
+        # تنظيف الملفات المرفوعة السابقة
+        if st.session_state.uploaded_path:
+            cleanup_file(st.session_state.uploaded_path)
             st.session_state.uploaded_path = None
             st.session_state.uploaded_result = None
-            st.session_state.show_uploaded = None
 
-        # Save recording temporarily
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-            tmp.write(audio_bytes)
-            st.session_state.recorded_path = tmp.name
+        # حفظ التسجيل
+        temp_path = tempfile.NamedTemporaryFile(delete=False, suffix=".wav").name
+        with open(temp_path, "wb") as f:
+            f.write(audio_bytes)
+        
+        st.session_state.recorded_path = temp_path
+        st.session_state.audio_bytes_processed = audio_bytes
+        
+        # التنبؤ
+        st.session_state.recorded_result = predict_gender(temp_path)
 
-        # Predict gender
-        st.session_state.recorded_result = predict_gender(st.session_state.recorded_path)
-        st.session_state.show_recorded = True
-        st.session_state.file_processed = "recorded_audio"
-
-    # Display results for recorded audio
-    if st.session_state.show_recorded and st.session_state.recorded_result:
+    # عرض النتائج للتسجيل
+    if st.session_state.recorded_path and st.session_state.recorded_result:
         st.success(f"**Prediction (Recorded):** {st.session_state.recorded_result}")
 
         if os.path.exists(st.session_state.recorded_path):
@@ -222,41 +203,44 @@ with tab2:
                 with col2:
                     st.audio(st.session_state.recorded_path, format="audio/wav")
 
-        # --- Remove recorded audio ---
-        col1, col2 = st.columns([1, 3])
-        with col1:
-            if st.button("🗑 Remove Recorded Audio", key="btn_remove_record"):
-                if st.session_state.recorded_path and os.path.exists(st.session_state.recorded_path):
-                    try:
-                        os.remove(st.session_state.recorded_path)
-                    except Exception as e:
-                        st.error(f"⚠ Failed to remove recording: {e}")
-                
+        # زر مسح التسجيل
+        if st.button("🗑 Remove Recorded Audio", key="btn_remove_record"):
+            if cleanup_file(st.session_state.recorded_path):
                 st.session_state.recorded_path = None
                 st.session_state.recorded_result = None
-                st.session_state.show_recorded = None
-                st.session_state.file_processed = None
-                st.rerun()
+                st.session_state.audio_bytes_processed = None
+                st.success("✅ Recording removed successfully!")
+                time.sleep(1)
+                st.experimental_rerun()
+            else:
+                st.error("⚠ Failed to remove recording")
 
-# --- Clear All Button ---
+# زر مسح الكل
 st.markdown("---")
-col1, col2 = st.columns([1, 4])
-with col1:
-    if st.button("🗑 Clear All", type="secondary", key="btn_clear_all"):
-        cleanup_files()
-        st.session_state.uploaded_path = None
-        st.session_state.recorded_path = None
-        st.session_state.uploaded_result = None
-        st.session_state.recorded_result = None
-        st.session_state.show_uploaded = None
-        st.session_state.show_recorded = None
-        st.session_state.file_processed = None
-        st.rerun()
+if st.button("🗑 Clear All Files", type="secondary", key="btn_clear_all"):
+    # مسح جميع الملفات
+    cleanup_file(st.session_state.uploaded_path)
+    cleanup_file(st.session_state.recorded_path)
+    
+    # إعادة تعيين جميع الحالات
+    st.session_state.uploaded_path = None
+    st.session_state.recorded_path = None
+    st.session_state.uploaded_result = None
+    st.session_state.recorded_result = None
+    st.session_state.current_file = None
+    st.session_state.audio_bytes_processed = None
+    
+    st.success("✅ All files cleared successfully!")
+    time.sleep(1)
+    st.experimental_rerun()
 
-# --- Footer ---
+# الفوتر
 st.markdown("---")
 st.caption("💡 Powered by Streamlit • 🧠 Model: CNN trained on STFT Spectrograms")
 
-# تنظيف الملفات المؤقتة عند إغلاق التطبيق
+# تنظيف الملفات عند الخروج
 import atexit
-atexit.register(cleanup_files)
+atexit.register(lambda: [
+    cleanup_file(st.session_state.uploaded_path),
+    cleanup_file(st.session_state.recorded_path)
+])
