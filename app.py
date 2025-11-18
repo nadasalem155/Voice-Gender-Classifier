@@ -8,134 +8,157 @@ import matplotlib.pyplot as plt
 from audio_recorder_streamlit import audio_recorder
 import time
 
-# === Optimization 1: Hide internal audio tag to speed up recorder ===
+# === Hide default audio element for cleaner UI ===
 st.markdown("<style>audio{display:none;}</style>", unsafe_allow_html=True)
 
-# --- Load Keras model once ---
+# === Load model once (cached) ===
 @st.cache_resource
 def load_model():
     return tf.keras.models.load_model("gender_voice_model.keras", compile=False)
 
 model = load_model()
 
-# --- Preprocess audio file ---
+# === Preprocess audio (convert to spectrogram) ===
 def preprocess_audio(filename, max_len=48000):
     try:
         wav, sr = librosa.load(filename, sr=16000, mono=True)
+
+        # Normalize audio length
         if len(wav) > max_len:
             wav = wav[:max_len]
         else:
             wav = np.pad(wav, (0, max_len - len(wav)))
-        
+
         spec = np.abs(librosa.stft(wav, n_fft=512, hop_length=256))
         spec = np.expand_dims(spec, -1)
         spec = tf.image.resize(spec, [128, 128])
         spec = np.expand_dims(spec, 0)
+
         return spec, wav, sr
+
     except Exception as e:
         st.error(f"Error processing audio: {e}")
         return None, None, None
 
-# --- Predict gender from audio ---
+# === Predict gender ===
 def predict_gender(file_path):
     features, _, _ = preprocess_audio(file_path)
     if features is None:
         return None
     pred = model.predict(features)
-    return "👨‍🦱 Male" if pred[0][0] > 0.5 else "👩‍🦰 Female"
+    return "👨 Male Voice" if pred[0][0] > 0.5 else "👩 Female Voice"
 
-# --- Initialize session state ---
+# === Initialize session state ===
 for key in ["uploaded_path", "recorded_path", "uploaded_result", "recorded_result"]:
     if key not in st.session_state:
         st.session_state[key] = None
 
-# --- Streamlit UI ---
-st.title("🎤 Voice Gender Recognition")
-st.markdown("Detect whether a voice belongs to a **Male** or **Female** using a CNN model.")
+# ---------------------------------
+#           UI START
+# ---------------------------------
 
-# --- Upload audio file section ---
+st.title("🎧 Voice Gender Classifier")
+st.markdown("AI-powered gender detection from voice recordings.")
+
+# ===========================================================
+#                UPLOAD AUDIO SECTION
+# ===========================================================
 st.subheader("📂 Upload an Audio File")
-uploaded_file = st.file_uploader("Choose a file (wav, mp3, ogg) 🎧", type=["wav", "mp3", "ogg"], key="file_uploader")
+
+uploaded_file = st.file_uploader(
+    "Choose an audio file (wav, mp3, ogg):",
+    type=["wav", "mp3", "ogg"],
+    key="file_uploader"
+)
+
 if uploaded_file is not None:
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
-        tmp_file.write(uploaded_file.read())
-        st.session_state.uploaded_path = tmp_file.name
-    
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+        tmp.write(uploaded_file.read())
+        st.session_state.uploaded_path = tmp.name
+
     st.session_state.uploaded_result = predict_gender(st.session_state.uploaded_path)
 
-# --- Display uploaded file result ---
+# Display prediction + waveform
 if st.session_state.uploaded_path and st.session_state.uploaded_result:
-    st.success(f"Prediction (Uploaded): {st.session_state.uploaded_result}")
-    
+    st.success(f"Prediction (Uploaded File): **{st.session_state.uploaded_result}**")
+
     spec, wav, sr = preprocess_audio(st.session_state.uploaded_path)
+
     if wav is not None:
         plt.figure(figsize=(8, 2))
+        plt.plot(wav)
         plt.title("📈 Waveform")
-        plt.plot(wav, color="#1f77b4")
         plt.xlabel("Samples")
         plt.ylabel("Amplitude")
         st.pyplot(plt)
-        
+        plt.close()
+
         st.audio(st.session_state.uploaded_path, format="audio/wav")
 
-# --- Remove button for uploaded file ---
+# Remove uploaded file
 if st.session_state.uploaded_path:
-    if st.button("🗑️ Remove Uploaded File", key="remove_uploaded"):
+    if st.button("🗑️ Remove Uploaded File"):
         try:
-            if st.session_state.uploaded_path and os.path.exists(st.session_state.uploaded_path):
+            if os.path.exists(st.session_state.uploaded_path):
                 os.remove(st.session_state.uploaded_path)
             st.session_state.uploaded_path = None
             st.session_state.uploaded_result = None
             if "file_uploader" in st.session_state:
-                del st.session_state["file_uploader"]  # Clear file uploader state
-            st.success("Uploaded file removed successfully!")
+                del st.session_state["file_uploader"]
+            st.success("Uploaded file removed.")
             time.sleep(0.1)
             st.rerun()
         except Exception as e:
-            st.error(f"Error removing file: {e}")
+            st.error(f"Error: {e}")
 
-# --- Record audio section ---
+# ===========================================================
+#                RECORD AUDIO SECTION
+# ===========================================================
 st.subheader("🎤 Record Your Voice")
-st.markdown("Click the microphone button to record your voice from the browser.")
-audio_bytes = audio_recorder(key="audio_recorder")
+st.markdown("Click the microphone button to start recording:")
+
+audio_bytes = audio_recorder(key="rec_button")
+
 if audio_bytes:
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
-        tmp_file.write(audio_bytes)
-        
-        # === Optimization 2: Clear cache after recording to improve speed ===
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+        tmp.write(audio_bytes)
+
+        # Ensure fresh processing
         st.cache_resource.clear()
-        
-        st.session_state.recorded_path = tmp_file.name
-    
+
+        st.session_state.recorded_path = tmp.name
+
     st.session_state.recorded_result = predict_gender(st.session_state.recorded_path)
 
-# --- Display recorded audio result ---
+# Display prediction + waveform for recorded audio
 if st.session_state.recorded_path and st.session_state.recorded_result:
-    st.success(f"Prediction (Recorded): {st.session_state.recorded_result}")
-    
+    st.success(f"Prediction (Recorded Audio): **{st.session_state.recorded_result}**")
+
     spec, wav, sr = preprocess_audio(st.session_state.recorded_path)
+
     if wav is not None:
         plt.figure(figsize=(8, 2))
-        plt.title("📈 Waveform")
-        plt.plot(wav, color="#ff7f0e")
+        plt.plot(wav)
+        plt.title("📈 Recorded Waveform")
         plt.xlabel("Samples")
         plt.ylabel("Amplitude")
         st.pyplot(plt)
-        
+        plt.close()
+
         st.audio(st.session_state.recorded_path, format="audio/wav")
 
-# --- Remove button for recorded audio ---
+# Remove recorded file
 if st.session_state.recorded_path:
-    if st.button("🗑️ Remove Recorded Audio", key="remove_recorded"):
+    if st.button("🗑️ Remove Recording"):
         try:
-            if st.session_state.recorded_path and os.path.exists(st.session_state.recorded_path):
+            if os.path.exists(st.session_state.recorded_path):
                 os.remove(st.session_state.recorded_path)
             st.session_state.recorded_path = None
             st.session_state.recorded_result = None
-            if "audio_recorder" in st.session_state:
-                del st.session_state["audio_recorder"]
-            st.success("Recorded audio removed successfully!")
+            if "rec_button" in st.session_state:
+                del st.session_state["rec_button"]
+            st.success("Recording removed.")
             time.sleep(0.1)
             st.rerun()
         except Exception as e:
-            st.error(f"Error removing recorded audio: {e}")
+            st.error(f"Error: {e}")
