@@ -8,9 +8,6 @@ import matplotlib.pyplot as plt
 from audio_recorder_streamlit import audio_recorder
 import time
 
-# === تحسين 1: منع الـ audio tag الداخلي (يسسرّع الريكورد) ===
-st.markdown("<style>audio{display:none;}</style>", unsafe_allow_html=True)
-
 # --- Load Keras model once ---
 @st.cache_resource
 def load_model():
@@ -89,7 +86,7 @@ if st.session_state.uploaded_path:
             if "file_uploader" in st.session_state:
                 del st.session_state["file_uploader"]  # Clear file uploader state
             st.success("Uploaded file removed successfully!")
-            time.sleep(0.1)
+            time.sleep(0.1)  # Brief delay to ensure UI updates
             st.rerun()
         except Exception as e:
             st.error(f"Error removing file: {e}")
@@ -101,10 +98,6 @@ audio_bytes = audio_recorder(key="audio_recorder")
 if audio_bytes:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
         tmp_file.write(audio_bytes)
-        
-        # === تحسين 2: تنظيف الكاش بعد الريكورد عشان يبقى أسرع ===
-        st.cache_resource.clear()
-        
         st.session_state.recorded_path = tmp_file.name
     
     st.session_state.recorded_result = predict_gender(st.session_state.recorded_path)
@@ -133,9 +126,9 @@ if st.session_state.recorded_path:
             st.session_state.recorded_path = None
             st.session_state.recorded_result = None
             if "audio_recorder" in st.session_state:
-                del st.session_state["audio_recorder"]
+                del st.session_state["audio_recorder"]  # Clear audio recorder state
             st.success("Recorded audio removed successfully!")
-            time.sleep(0.1)
+            time.sleep(0.1)  # Brief delay to ensure UI updates
             st.rerun()
         except Exception as e:
             st.error(f"Error removing recorded audio: {e}")
