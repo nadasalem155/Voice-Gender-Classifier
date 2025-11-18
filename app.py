@@ -51,7 +51,7 @@ for key in ["uploaded_path", "recorded_path", "uploaded_result", "recorded_resul
 
 # --- Streamlit UI ---
 st.title("🎤 Voice Gender Recognition")
-st.markdown("Detect whether a voice belongs to a **Male** or **Female** using a CNN model.")
+st.markdown("Detect whether a voice belongs to a **Male 👨‍🦱** or **Female 👩‍🦰** using a CNN model.")
 
 # --- Upload audio file section ---
 st.subheader("📂 Upload an Audio File")
