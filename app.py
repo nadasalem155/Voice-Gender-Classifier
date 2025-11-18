@@ -8,6 +8,9 @@ import matplotlib.pyplot as plt
 from audio_recorder_streamlit import audio_recorder
 import time
 
+# === Optimization 1: Hide internal audio tag to speed up recorder ===
+st.markdown("<style>audio{display:none;}</style>", unsafe_allow_html=True)
+
 # --- Load Keras model once ---
 @st.cache_resource
 def load_model():
@@ -60,7 +63,7 @@ if uploaded_file is not None:
     
     st.session_state.uploaded_result = predict_gender(st.session_state.uploaded_path)
 
-# Display uploaded file result
+# --- Display uploaded file result ---
 if st.session_state.uploaded_path and st.session_state.uploaded_result:
     st.success(f"Prediction (Uploaded): {st.session_state.uploaded_result}")
     
@@ -86,7 +89,7 @@ if st.session_state.uploaded_path:
             if "file_uploader" in st.session_state:
                 del st.session_state["file_uploader"]  # Clear file uploader state
             st.success("Uploaded file removed successfully!")
-            time.sleep(0.1)  # Brief delay to ensure UI updates
+            time.sleep(0.1)
             st.rerun()
         except Exception as e:
             st.error(f"Error removing file: {e}")
@@ -98,11 +101,15 @@ audio_bytes = audio_recorder(key="audio_recorder")
 if audio_bytes:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
         tmp_file.write(audio_bytes)
+        
+        # === Optimization 2: Clear cache after recording to improve speed ===
+        st.cache_resource.clear()
+        
         st.session_state.recorded_path = tmp_file.name
     
     st.session_state.recorded_result = predict_gender(st.session_state.recorded_path)
 
-# Display recorded audio result
+# --- Display recorded audio result ---
 if st.session_state.recorded_path and st.session_state.recorded_result:
     st.success(f"Prediction (Recorded): {st.session_state.recorded_result}")
     
@@ -126,9 +133,9 @@ if st.session_state.recorded_path:
             st.session_state.recorded_path = None
             st.session_state.recorded_result = None
             if "audio_recorder" in st.session_state:
-                del st.session_state["audio_recorder"]  # Clear audio recorder state
+                del st.session_state["audio_recorder"]
             st.success("Recorded audio removed successfully!")
-            time.sleep(0.1)  # Brief delay to ensure UI updates
+            time.sleep(0.1)
             st.rerun()
         except Exception as e:
             st.error(f"Error removing recorded audio: {e}")
