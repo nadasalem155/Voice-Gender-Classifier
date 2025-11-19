@@ -63,20 +63,23 @@ if uploaded_file is not None:
     
     st.session_state.uploaded_result = predict_gender(st.session_state.uploaded_path)
 
-# --- Display uploaded file result ---
+# --- Display uploaded file result with waveform and audio ---
 if st.session_state.uploaded_path and st.session_state.uploaded_result:
     st.success(f"Prediction (Uploaded): {st.session_state.uploaded_result}")
     
-    spec, wav, sr = preprocess_audio(st.session_state.uploaded_path)
-    if wav is not None:
-        plt.figure(figsize=(8, 2))
-        plt.title("📈 Waveform")
-        plt.plot(wav, color="#1f77b4")
-        plt.xlabel("Samples")
-        plt.ylabel("Amplitude")
-        st.pyplot(plt)
-        
+    try:
+        spec, wav, sr = preprocess_audio(st.session_state.uploaded_path)
+        if wav is not None:
+            fig, ax = plt.subplots(figsize=(8, 2))
+            ax.plot(wav, color="#1f77b4")
+            ax.set_title("📈 Waveform (Uploaded)")
+            ax.set_xlabel("Samples")
+            ax.set_ylabel("Amplitude")
+            st.pyplot(fig)
+            
         st.audio(st.session_state.uploaded_path, format="audio/wav")
+    except Exception as e:
+        st.error(f"Error displaying uploaded audio: {e}")
 
 # --- Remove button for uploaded file ---
 if st.session_state.uploaded_path:
@@ -101,28 +104,27 @@ audio_bytes = audio_recorder(key="audio_recorder")
 if audio_bytes:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
         tmp_file.write(audio_bytes)
-        
-        # === Optimization 2: Clear cache after recording to improve speed ===
-        st.cache_resource.clear()
-        
         st.session_state.recorded_path = tmp_file.name
     
     st.session_state.recorded_result = predict_gender(st.session_state.recorded_path)
 
-# --- Display recorded audio result ---
+# --- Display recorded audio result with waveform and audio ---
 if st.session_state.recorded_path and st.session_state.recorded_result:
     st.success(f"Prediction (Recorded): {st.session_state.recorded_result}")
     
-    spec, wav, sr = preprocess_audio(st.session_state.recorded_path)
-    if wav is not None:
-        plt.figure(figsize=(8, 2))
-        plt.title("📈 Waveform")
-        plt.plot(wav, color="#ff7f0e")
-        plt.xlabel("Samples")
-        plt.ylabel("Amplitude")
-        st.pyplot(plt)
-        
+    try:
+        spec, wav, sr = preprocess_audio(st.session_state.recorded_path)
+        if wav is not None:
+            fig, ax = plt.subplots(figsize=(8, 2))
+            ax.plot(wav, color="#ff7f0e")
+            ax.set_title("📈 Waveform (Recorded)")
+            ax.set_xlabel("Samples")
+            ax.set_ylabel("Amplitude")
+            st.pyplot(fig)
+            
         st.audio(st.session_state.recorded_path, format="audio/wav")
+    except Exception as e:
+        st.error(f"Error displaying recorded audio: {e}")
 
 # --- Remove button for recorded audio ---
 if st.session_state.recorded_path:
