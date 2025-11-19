@@ -8,8 +8,12 @@ import matplotlib.pyplot as plt
 from audio_recorder_streamlit import audio_recorder
 import time
 
-# === Optimization 1: Hide internal audio tag to speed up recorder ===
-st.markdown("<style>audio{display:none;}</style>", unsafe_allow_html=True)
+# === Optimization 1: Hide only the internal recorder audio tag (NOT all audio tags) ===
+st.markdown("""
+<style>
+audio[src*="data:audio"] { display: none; }
+</style>
+""", unsafe_allow_html=True)
 
 # --- Load Keras model once ---
 @st.cache_resource
@@ -90,7 +94,7 @@ if st.session_state.uploaded_path:
             st.session_state.uploaded_path = None
             st.session_state.uploaded_result = None
             if "file_uploader" in st.session_state:
-                del st.session_state["file_uploader"]  # Clear file uploader state
+                del st.session_state["file_uploader"]
             st.success("Uploaded file removed successfully!")
             time.sleep(0.1)
             st.rerun()
