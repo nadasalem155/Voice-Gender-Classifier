@@ -134,11 +134,12 @@ audio_bytes = audio_recorder(key="audio_recorder")
 if audio_bytes and st.session_state.last_audio != audio_bytes:
     st.session_state.last_audio = audio_bytes
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-        tmp.write(audio_bytes)
-        st.session_state.recorded_path = tmp.name
+    with st.spinner("⏳ Processing your voice... Please wait"):
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+            tmp.write(audio_bytes)
+            st.session_state.recorded_path = tmp.name
 
-    st.session_state.recorded_result = predict_gender(st.session_state.recorded_path)
+        st.session_state.recorded_result = predict_gender(st.session_state.recorded_path)
 
 # ---- Display recorded prediction ----
 if st.session_state.recorded_path and st.session_state.recorded_result:
