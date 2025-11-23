@@ -5,11 +5,11 @@ import numpy as np
 import librosa
 import tensorflow as tf
 import matplotlib.pyplot as plt
-import soundfile as sf   # Faster audio reading
+import soundfile as sf   # ⚡ أسرع في قراءة الصوت
 from audio_recorder_streamlit import audio_recorder
 import time
 
-# === Hide only internal Streamlit recorder audio player ===
+# === Optimization: Hide only internal recorder audio tag ===
 st.markdown("""
 <style>
 audio[src*="data:audio"] { display: none; }
@@ -28,22 +28,22 @@ model = load_model()
 # ============================================================
 def preprocess_audio_fast(filename, max_len=48000):
     try:
-        # Fast audio loading
+        # Faster load
         wav, sr = sf.read(filename)
         wav = wav.astype(np.float32)
 
-        # Resample to 16k if needed
+        # Resample if needed
         if sr != 16000:
             wav = librosa.resample(wav, orig_sr=sr, target_sr=16000)
             sr = 16000
 
-        # Pad or trim audio
+        # Pad/Trim
         if len(wav) > max_len:
             wav = wav[:max_len]
         else:
             wav = np.pad(wav, (0, max_len - len(wav)))
 
-        # Fast STFT using TensorFlow
+        # ⚡ Fast TensorFlow STFT
         stft = tf.signal.stft(
             wav,
             frame_length=512,
@@ -71,11 +71,11 @@ def predict_gender(path):
     return "👨‍🦱 Male" if pred[0][0] > 0.5 else "👩‍🦰 Female"
 
 
-# --- Session state keys ---
+# --- Session state ---
 for key in ["uploaded_path", "recorded_path", "uploaded_result", "recorded_result", "last_audio"]:
     st.session_state.setdefault(key, None)
 
-# --- UI Header ---
+# --- UI ---
 st.title("🎤 Voice Gender Recognition")
 st.markdown("Detect gender from voice using a deep learning model.")
 
@@ -92,7 +92,7 @@ if uploaded_file:
     
     st.session_state.uploaded_result = predict_gender(st.session_state.uploaded_path)
 
-# ---- Display uploaded prediction ----
+# ---- Display uploaded results ----
 if st.session_state.uploaded_path and st.session_state.uploaded_result:
     st.success(f"Prediction (Uploaded): {st.session_state.uploaded_result}")
 
@@ -109,9 +109,9 @@ if st.session_state.uploaded_path and st.session_state.uploaded_result:
     except Exception as e:
         st.error(f"Error displaying uploaded audio: {e}")
 
-# ---- Remove uploaded file ----
+# ---- Remove uploaded ----
 if st.session_state.uploaded_path:
-    if st.button("🗑 Remove Uploaded File"):
+    if st.button("🗑️ Remove Uploaded File"):
         try:
             if os.path.exists(st.session_state.uploaded_path):
                 os.remove(st.session_state.uploaded_path)
@@ -130,7 +130,7 @@ st.markdown("Click the microphone to start recording.")
 
 audio_bytes = audio_recorder(key="audio_recorder")
 
-# Avoid re-predicting the same audio multiple times
+# ⚡ DO NOT re-predict if audio is same as previous
 if audio_bytes and st.session_state.last_audio != audio_bytes:
     st.session_state.last_audio = audio_bytes
 
@@ -140,7 +140,7 @@ if audio_bytes and st.session_state.last_audio != audio_bytes:
 
     st.session_state.recorded_result = predict_gender(st.session_state.recorded_path)
 
-# ---- Display recorded prediction ----
+# ---- Display recorded results ----
 if st.session_state.recorded_path and st.session_state.recorded_result:
     st.success(f"Prediction (Recorded): {st.session_state.recorded_result}")
 
@@ -157,9 +157,9 @@ if st.session_state.recorded_path and st.session_state.recorded_result:
     except Exception as e:
         st.error(f"Error displaying recorded audio: {e}")
 
-# ---- Remove recorded file ----
+# ---- Remove recording ----
 if st.session_state.recorded_path:
-    if st.button("🗑 Remove Recorded Audio"):
+    if st.button("🗑️ Remove Recorded Audio"):
         try:
             if os.path.exists(st.session_state.recorded_path):
                 os.remove(st.session_state.recorded_path)
