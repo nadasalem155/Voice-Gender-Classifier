@@ -8,8 +8,14 @@ import matplotlib.pyplot as plt
 from audio_recorder_streamlit import audio_recorder
 import time
 
-# Hide default audio tag for faster UI
-st.markdown("<style>audio{display:none;}</style>", unsafe_allow_html=True)
+# Fix: Hide only the internal recorder audio, NOT our own players
+st.markdown("""
+    <style>
+        div[data-testid="stAudioRecorder"] audio {
+            display: none !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
 # Load model once
 @st.cache_resource
@@ -26,96 +32,77 @@ def preprocess_audio(filename, max_len=48000):
             wav = wav[:max_len]
         else:
             wav = np.pad(wav, (0, max_len - len(wav)))
-
+        
         spec = np.abs(librosa.stft(wav, n_fft=512, hop_length=256))
         spec = np.expand_dims(spec, -1)
         spec = tf.image.resize(spec, [128, 128])
         spec = np.expand_dims(spec, 0)
-        return spec.astype(np.float32), wav, sr
+        return spec.astype("float32"), wav, sr
     except Exception as e:
         st.error(f"Error processing audio: {e}")
         return None, None, None
 
-# Predict gender with confidence
+# Predict gender
 def predict_gender(file_path):
     features, _, _ = preprocess_audio(file_path)
     if features is None:
-        return None, None
+        return None
     pred = model.predict(features, verbose=0)[0][0]
-    if pred > 0.5:
-        return "Man", pred
-    else:
-        return "Woman", 1 - pred
+    return "Male" if pred > 0.5 else "Female"
 
 # Initialize session state
 for key in ["uploaded_path", "recorded_path", "uploaded_result", "recorded_result"]:
     if key not in st.session_state:
         st.session_state[key] = None
 
-# =========================
-# Header
-# =========================
+# App UI
 st.title("Voice Gender Recognition")
-st.markdown("### Detect whether a voice is **Male** or **Female** using AI")
+st.markdown("### Instantly detect if a voice is **Male** or **Female** using AI")
 
-# =========================
 # Upload Section
-# =========================
 st.markdown("---")
 st.subheader("Upload Audio File")
-uploaded_file = st.file_uploader(
-    "Choose a file (wav, mp3, ogg)",
-    type=["wav", "mp3", "ogg"],
-    key="uploader"
-)
+uploaded_file = st.file_uploader("Choose a file (wav, mp3, ogg)", type=["wav", "mp3", "ogg"])
 
 if uploaded_file is not None:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
         f.write(uploaded_file.read())
         st.session_state.uploaded_path = f.name
     
-    label, conf = predict_gender(st.session_state.uploaded_path)
-    st.session_state.uploaded_result = (label, conf)
+    result = predict_gender(st.session_state.uploaded_path)
+    st.session_state.uploaded_result = result
 
 if st.session_state.uploaded_path and st.session_state.uploaded_result:
-    label, conf = st.session_state.uploaded_result
+    st.success(f"Uploaded Audio → **{st.session_state.uploaded_result}**")
     
-    st.success(f"### Result: {label}")
-    st.caption(f"Confidence: {conf:.1%}")
-
     _, wav, _ = preprocess_audio(st.session_state.uploaded_path)
+    fig, ax = plt.subplots(figsize=(10, 3))
+    ax.plot(wav, color="#3498db", linewidth=1)
+    ax.set_title("Waveform - Uploaded Audio", fontsize=14)
+    ax.grid(True, alpha=0.3)
+    st.pyplot(fig)
     
-    col1, col2 = st.columns([4, 1])
-    with col1:
-        fig, ax = plt.subplots(figsize=(10, 3))
-        ax.plot(wav, color="#2E86AB", linewidth=1)
-        ax.set_title("Waveform", fontsize=14, pad=15)
-        ax.grid(True, alpha=0.3)
-        st.pyplot(fig)
-    with col2:
-        st.audio(st.session_state.uploaded_path)
+    st.audio(st.session_state.uploaded_path)  # You can hear it now!
 
-    if st.button("Remove Uploaded File", key="del_up"):
+    if st.button("Remove Uploaded File", key="remove_upload"):
         os.unlink(st.session_state.uploaded_path)
         st.session_state.uploaded_path = None
         st.session_state.uploaded_result = None
-        st.success("File removed!")
+        st.success("Uploaded file removed!")
         time.sleep(0.1)
         st.rerun()
 
-# =========================
 # Record Section
-# =========================
 st.markdown("---")
 st.subheader("Record Your Voice")
-st.write("Click the microphone, speak, then stop – instant analysis!")
+st.write("Click the microphone, speak clearly, then stop — instant result!")
 
 audio_bytes = audio_recorder(
-    text="Click to record",
+    text="Click to Record",
     recording_color="#e74c3c",
-    neutral_color="#34495e",
+    neutral_color="#2c3e50",
     icon_size="3x",
-    key="recorder"   # ← Fixed line
+    key="recorder"
 )
 
 if audio_bytes:
@@ -123,28 +110,22 @@ if audio_bytes:
         f.write(audio_bytes)
         st.session_state.recorded_path = f.name
     
-    label, conf = predict_gender(st.session_state.recorded_path)
-    st.session_state.recorded_result = (label, conf)
+    result = predict_gender(st.session_state.recorded_path)
+    st.session_state.recorded_result = result
 
 if st.session_state.recorded_path and st.session_state.recorded_result:
-    label, conf = st.session_state.recorded_result
+    st.success(f"Live Recording → **{st.session_state.recorded_result}**")
     
-    st.success(f"### Result: {label}")
-    st.caption(f"Confidence: {conf:.1%}")
-
     _, wav, _ = preprocess_audio(st.session_state.recorded_path)
+    fig, ax = plt.subplots(figsize=(10, 3))
+    ax.plot(wav, color="#e74c3c", linewidth=1)
+    ax.set_title("Waveform - Your Recorded Voice", fontsize=14)
+    ax.grid(True, alpha=0.3)
+    st.pyplot(fig)
     
-    col1, col2 = st.columns([4, 1])
-    with col1:
-        fig, ax = plt.subplots(figsize=(10, 3))
-        ax.plot(wav, color="#E67E22", linewidth=1)
-        ax.set_title("Recorded Waveform", fontsize=14, pad=15)
-        ax.grid(True, alpha=0.3)
-        st.pyplot(fig)
-    with col2:
-        st.audio(st.session_state.recorded_path)
+    st.audio(st.session_state.recorded_path)  # You can hear your recording now!
 
-    if st.button("Remove Recording", key="del_rec"):
+    if st.button("Remove Recording", key="remove_record"):
         os.unlink(st.session_state.recorded_path)
         st.session_state.recorded_path = None
         st.session_state.recorded_result = None
@@ -152,8 +133,6 @@ if st.session_state.recorded_path and st.session_state.recorded_result:
         time.sleep(0.1)
         st.rerun()
 
-# =========================
 # Footer
-# =========================
 st.markdown("---")
-st.caption("Made with Streamlit • Powered by a CNN trained on voice spectrograms")
+st.caption("Made with ❤️ using Streamlit • CNN Model trained on voice spectrograms")
