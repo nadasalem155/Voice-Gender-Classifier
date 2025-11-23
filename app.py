@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from audio_recorder_streamlit import audio_recorder
 import time
 
-# Hide default audio tag for faster recorder
+# Hide default audio tag for faster UI
 st.markdown("<style>audio{display:none;}</style>", unsafe_allow_html=True)
 
 # Load model once
@@ -31,8 +31,7 @@ def preprocess_audio(filename, max_len=48000):
         spec = np.expand_dims(spec, -1)
         spec = tf.image.resize(spec, [128, 128])
         spec = np.expand_dims(spec, 0)
-        return spec = spec.astype(np.float32)
-        return spec, wav, sr
+        return spec.astype(np.float32), wav, sr
     except Exception as e:
         st.error(f"Error processing audio: {e}")
         return None, None, None
@@ -53,18 +52,20 @@ for key in ["uploaded_path", "recorded_path", "uploaded_result", "recorded_resul
     if key not in st.session_state:
         st.session_state[key] = None
 
-# Title & Header
+# =========================
+# Header
+# =========================
 st.title("Voice Gender Recognition")
-st.markdown("### Detect if a voice is **Male** or **Female** using deep learning")
+st.markdown("### Detect whether a voice is **Male** or **Female** using AI")
 
-# ========================================
+# =========================
 # Upload Section
-# ========================================
+# =========================
 st.markdown("---")
 st.subheader("Upload Audio File")
 uploaded_file = st.file_uploader(
-    "Choose a file (wav, mp3, ogg)", 
-    type=["wav", "mp3", "ogg"], 
+    "Choose a file (wav, mp3, ogg)",
+    type=["wav", "mp3", "ogg"],
     key="uploader"
 )
 
@@ -102,19 +103,19 @@ if st.session_state.uploaded_path and st.session_state.uploaded_result:
         time.sleep(0.1)
         st.rerun()
 
-# ========================================
+# =========================
 # Record Section
-# ========================================
+# =========================
 st.markdown("---")
 st.subheader("Record Your Voice")
-st.write("Click the microphone and speak – the app will analyze it live!")
+st.write("Click the microphone, speak, then stop – instant analysis!")
 
 audio_bytes = audio_recorder(
     text="Click to record",
     recording_color="#e74c3c",
     neutral_color="#34495e",
     icon_size="3x",
-    key="recorder_key="recorder"
+    key="recorder"   # ← Fixed line
 )
 
 if audio_bytes:
@@ -151,6 +152,8 @@ if st.session_state.recorded_path and st.session_state.recorded_result:
         time.sleep(0.1)
         st.rerun()
 
+# =========================
 # Footer
+# =========================
 st.markdown("---")
-st.caption("Made with Streamlit • Model trained on voice spectrograms")
+st.caption("Made with Streamlit • Powered by a CNN trained on voice spectrograms")
