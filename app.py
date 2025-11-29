@@ -89,8 +89,7 @@ with st.container():
                 os.remove(st.session_state.uploaded_path)
             st.session_state.uploaded_path = None
             st.session_state.uploaded_result = None
-            # عند المسح، نعيد تحميل الصفحة لتحديث uploader
-            st.experimental_rerun()
+            st.success("✅ Uploaded file removed successfully")
 
 # ============================================================
 # 🎤 Record Section
@@ -128,4 +127,4 @@ with st.container():
             st.session_state.recorded_result = None
             if "audio_recorder" in st.session_state:
                 del st.session_state["audio_recorder"]
-            st.experimental_rerun()
+            st.success("✅ Recorded file removed successfully")
