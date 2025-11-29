@@ -32,6 +32,11 @@ def preprocess_audio_fast(filename, max_len=48000):
         wav, sr = sf.read(filename)
         wav = wav.astype(np.float32)
 
+        # Check if the audio is empty
+        if len(wav) == 0:
+            st.error("The audio file is empty.")
+            return None, None, None
+
         # Resample to 16k if needed
         if sr != 16000:
             wav = librosa.resample(wav, orig_sr=sr, target_sr=16000)
@@ -53,6 +58,12 @@ def preprocess_audio_fast(filename, max_len=48000):
 
         spec = tf.abs(stft)
         spec = tf.expand_dims(spec, -1)
+        
+        # Check if the spectrogram is empty
+        if spec.shape[0] == 0 or spec.shape[1] == 0:
+            st.error("The audio processing resulted in an empty spectrogram.")
+            return None, None, None
+
         spec = tf.image.resize(spec, [128, 128])
         spec = tf.expand_dims(spec, 0)
 
@@ -69,7 +80,6 @@ def predict_gender(path):
         return None
     pred = model.predict(features, verbose=0)
     return "👨‍🦱 Male" if pred[0][0] > 0.5 else "👩‍🦰 Female"
-
 
 # --- Session state keys ---
 for key in ["uploaded_path", "recorded_path", "uploaded_result", "recorded_result", "last_audio"]:
