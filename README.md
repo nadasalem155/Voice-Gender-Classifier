@@ -56,22 +56,6 @@ The notebook demonstrates the full workflow:
 
 ---
 
-## ⚡ Usage Example (Python)
-
-```python
-import librosa
-import tensorflow as tf
-import numpy as np
-
-# Preprocess audio
-spec, wav, sr = preprocess_audio("path/to/audio.wav")
-
-# Predict gender
-pred = model.predict(spec)
-print("👨 Male" if pred[0][0] > 0.5 else "👩 Female")
-
-
----
 
 ## 📌 Notes
 
@@ -89,7 +73,6 @@ Recorded audio: #4CAF50
 Quiet environment and a few seconds of speech improve prediction accuracy.
 
 Spectrogram resizing ensures uniform input shape (128x128x1) for CNN.
-
 
 
 ---
