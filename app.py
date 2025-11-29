@@ -46,23 +46,46 @@ def predict_gender(path):
     if features is None:
         return None
     pred = model.predict(features, verbose=0)
-    return "Male" if pred[0][0] > 0.5 else "Female"
+    return "👨 Male" if pred[0][0] > 0.5 else "👩 Female"
 
 # --- Session state ---
 for key in ["uploaded_path", "recorded_path", "uploaded_result", "recorded_result"]:
     st.session_state.setdefault(key, None)
 
+# --- Sidebar Instructions ---
+st.sidebar.title("ℹ️ How to Use")
+st.sidebar.markdown("""
+**1️⃣ Upload a file:**  
+- Click on *'Choose an audio file'* 📁  
+- Supported formats: wav, mp3, ogg  
+- Wait a few seconds to get the prediction ✅
+
+**2️⃣ Record your voice:**  
+- Click the microphone 🎙️  
+- Speak clearly for better results  
+- Wait for analysis ⏳
+
+**3️⃣ Remove audio:**  
+- Use the 🗑️ button to delete uploaded or recorded audio  
+- This will reset the interface
+
+**Tips:**  
+- Quiet environment = more accurate prediction  
+- Speak a few seconds, not just 1 word  
+- Male voice → 👨, Female voice → 👩
+""")
+
 # --- UI ---
-st.title("Voice Gender Recognition")
-st.markdown("Detect gender from voice using a deep learning model.")
+st.title("🎤 Voice Gender Recognition")
+st.markdown("Detect gender from voice using a deep learning model 🧠✨")
 
 # ============================================================
 # Upload Section
 # ============================================================
 with st.container():
-    st.subheader("Upload Audio File")
+    st.subheader("📁 Upload Audio File")
     uploaded_file = st.file_uploader(
-        "Choose an audio file", 
+        "Select an audio file (wav, mp3, ogg) 🎧", 
         type=["wav", "mp3", "ogg"], 
         key="file_uploader"
     )
@@ -77,20 +100,19 @@ with st.container():
         st.success(f"Prediction (Uploaded): {st.session_state.uploaded_result}")
         spec, wav, sr = preprocess_audio(st.session_state.uploaded_path)
         fig, ax = plt.subplots(figsize=(8, 2))
-        ax.plot(wav)
-        ax.set_title("Waveform (Uploaded)")
+        ax.plot(wav, color="#FF6F61")
+        ax.set_title("📈 Waveform (Uploaded)")
         st.pyplot(fig)
         st.audio(st.session_state.uploaded_path)
 
-    # ---- Remove uploaded safely (الطريقة الصحيحة) ----
+    # ---- Remove uploaded safely ----
     if st.session_state.uploaded_path:
-        if st.button("Remove Uploaded File", key="remove_upload"):
+        if st.button("🗑️ Remove Uploaded File", key="remove_upload"):
             try:
                 if os.path.exists(st.session_state.uploaded_path):
                     os.remove(st.session_state.uploaded_path)
                 st.session_state.uploaded_path = None
                 st.session_state.uploaded_result = None
-                # حذف الـ widget عشان يرجع زي الأول
                 if "file_uploader" in st.session_state:
                     del st.session_state["file_uploader"]
                 st.rerun()
@@ -101,8 +123,8 @@ with st.container():
 # Record Section
 # ============================================================
 with st.container():
-    st.subheader("Record Your Voice")
-    st.markdown("Click the microphone to start recording.")
+    st.subheader("🎙️ Record Your Voice")
+    st.markdown("Click the microphone to start recording 🔴")
 
     audio_bytes = audio_recorder(key="audio_recorder")
 
@@ -111,28 +133,26 @@ with st.container():
             tmp.write(audio_bytes)
             st.session_state.recorded_path = tmp.name
 
-        # Loading spinner while predicting
-        with st.spinner("Analyzing your recording..."):
+        with st.spinner("Analyzing your recording... ⏳"):
             st.session_state.recorded_result = predict_gender(st.session_state.recorded_path)
 
     if st.session_state.recorded_path and st.session_state.recorded_result:
         st.success(f"Prediction (Recorded): {st.session_state.recorded_result}")
         spec, wav, sr = preprocess_audio(st.session_state.recorded_path)
         fig, ax = plt.subplots(figsize=(8, 2))
-        ax.plot(wav)
-        ax.set_title("Waveform (Recorded)")
+        ax.plot(wav, color="#4CAF50")
+        ax.set_title("📈 Waveform (Recorded)")
         st.pyplot(fig)
         st.audio(st.session_state.recorded_path)
 
-    # ---- Remove recorded safely (الطريقة الصحيحة) ----
+    # ---- Remove recorded safely ----
     if st.session_state.recorded_path:
-        if st.button("Remove Recorded Audio", key="remove_record"):
+        if st.button("🗑️ Remove Recorded Audio", key="remove_record"):
             try:
                 if os.path.exists(st.session_state.recorded_path):
                     os.remove(st.session_state.recorded_path)
                 st.session_state.recorded_path = None
                 st.session_state.recorded_result = None
-                # حذف الـ audio_recorder widget عشان الميكروفون يرجع يشتغل من الأول
                 if "audio_recorder" in st.session_state:
                     del st.session_state["audio_recorder"]
                 st.rerun()
