@@ -82,13 +82,15 @@ with st.container():
         st.pyplot(fig)
         st.audio(st.session_state.uploaded_path)
 
+    # ---- Remove uploaded ----
     if st.session_state.uploaded_path:
         if st.button("🗑️ Remove Uploaded File", key="remove_upload"):
             if os.path.exists(st.session_state.uploaded_path):
                 os.remove(st.session_state.uploaded_path)
             st.session_state.uploaded_path = None
             st.session_state.uploaded_result = None
-            del st.session_state["file_uploader"]
+            # إعادة تعيين uploader
+            st.session_state.file_uploader = None
 
 # ============================================================
 # 🎤 Record Section
@@ -117,7 +119,7 @@ with st.container():
         st.pyplot(fig)
         st.audio(st.session_state.recorded_path)
 
-    # ---- Remove recording FAST ----
+    # ---- Remove recorded FAST ----
     if st.session_state.recorded_path:
         if st.button("🗑️ Remove Recorded Audio", key="remove_record"):
             if os.path.exists(st.session_state.recorded_path):
