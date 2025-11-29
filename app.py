@@ -116,7 +116,9 @@ if audio_bytes:
         tmp.write(audio_bytes)
         st.session_state.recorded_path = tmp.name
 
-    st.session_state.recorded_result = predict_gender(st.session_state.recorded_path)
+    # Display a loading message while predicting
+    with st.spinner("Analyzing your recording..."):
+        st.session_state.recorded_result = predict_gender(st.session_state.recorded_path)
 
 # ---- Display recorded results ----
 if st.session_state.recorded_path and st.session_state.recorded_result:
