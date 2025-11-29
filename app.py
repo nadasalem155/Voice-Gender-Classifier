@@ -46,21 +46,21 @@ def predict_gender(path):
     if features is None:
         return None
     pred = model.predict(features, verbose=0)
-    return "👨‍🦱 Male" if pred[0][0] > 0.5 else "👩‍🦰 Female"
+    return "Male" if pred[0][0] > 0.5 else "Female"
 
 # --- Session state ---
 for key in ["uploaded_path", "recorded_path", "uploaded_result", "recorded_result"]:
     st.session_state.setdefault(key, None)
 
 # --- UI ---
-st.title("🎤 Voice Gender Recognition")
+st.title("Voice Gender Recognition")
 st.markdown("Detect gender from voice using a deep learning model.")
 
 # ============================================================
-# 📂 Upload Section
+# Upload Section
 # ============================================================
 with st.container():
-    st.subheader("📂 Upload Audio File")
+    st.subheader("Upload Audio File")
     uploaded_file = st.file_uploader(
         "Choose an audio file", 
         type=["wav", "mp3", "ogg"], 
@@ -78,24 +78,30 @@ with st.container():
         spec, wav, sr = preprocess_audio(st.session_state.uploaded_path)
         fig, ax = plt.subplots(figsize=(8, 2))
         ax.plot(wav)
-        ax.set_title("📈 Waveform (Uploaded)")
+        ax.set_title("Waveform (Uploaded)")
         st.pyplot(fig)
         st.audio(st.session_state.uploaded_path)
 
-    # ---- Remove uploaded safely ----
+    # ---- Remove uploaded safely (الطريقة الصحيحة) ----
     if st.session_state.uploaded_path:
-        if st.button("🗑️ Remove Uploaded File", key="remove_upload"):
-            if os.path.exists(st.session_state.uploaded_path):
-                os.remove(st.session_state.uploaded_path)
-            st.session_state.uploaded_path = None
-            st.session_state.uploaded_result = None
-            st.success("✅ Uploaded file removed successfully")
+        if st.button("Remove Uploaded File", key="remove_upload"):
+            try:
+                if os.path.exists(st.session_state.uploaded_path):
+                    os.remove(st.session_state.uploaded_path)
+                st.session_state.uploaded_path = None
+                st.session_state.uploaded_result = None
+                # حذف الـ widget عشان يرجع زي الأول
+                if "file_uploader" in st.session_state:
+                    del st.session_state["file_uploader"]
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error removing uploaded file: {e}")
 
 # ============================================================
-# 🎤 Record Section
+# Record Section
 # ============================================================
 with st.container():
-    st.subheader("🎤 Record Your Voice")
+    st.subheader("Record Your Voice")
     st.markdown("Click the microphone to start recording.")
 
     audio_bytes = audio_recorder(key="audio_recorder")
@@ -114,17 +120,21 @@ with st.container():
         spec, wav, sr = preprocess_audio(st.session_state.recorded_path)
         fig, ax = plt.subplots(figsize=(8, 2))
         ax.plot(wav)
-        ax.set_title("📈 Waveform (Recorded)")
+        ax.set_title("Waveform (Recorded)")
         st.pyplot(fig)
         st.audio(st.session_state.recorded_path)
 
-    # ---- Remove recorded FAST ----
+    # ---- Remove recorded safely (الطريقة الصحيحة) ----
     if st.session_state.recorded_path:
-        if st.button("🗑️ Remove Recorded Audio", key="remove_record"):
-            if os.path.exists(st.session_state.recorded_path):
-                os.remove(st.session_state.recorded_path)
-            st.session_state.recorded_path = None
-            st.session_state.recorded_result = None
-            if "audio_recorder" in st.session_state:
-                del st.session_state["audio_recorder"]
-            st.success("✅ Recorded file removed successfully")
+        if st.button("Remove Recorded Audio", key="remove_record"):
+            try:
+                if os.path.exists(st.session_state.recorded_path):
+                    os.remove(st.session_state.recorded_path)
+                st.session_state.recorded_path = None
+                st.session_state.recorded_result = None
+                # حذف الـ audio_recorder widget عشان الميكروفون يرجع يشتغل من الأول
+                if "audio_recorder" in st.session_state:
+                    del st.session_state["audio_recorder"]
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error removing recorded audio: {e}")
