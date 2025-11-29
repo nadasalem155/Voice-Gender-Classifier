@@ -5,11 +5,10 @@ import numpy as np
 import librosa
 import tensorflow as tf
 import matplotlib.pyplot as plt
-import soundfile as sf   # Faster audio reading
 from audio_recorder_streamlit import audio_recorder
 import time
 
-# === Hide only internal Streamlit recorder audio player ===
+# === Optimization: Hide only internal recorder audio tag ===
 st.markdown("""
 <style>
 audio[src*="data:audio"] { display: none; }
@@ -23,69 +22,41 @@ def load_model():
 
 model = load_model()
 
-# ============================================================
-# ⚡ FAST Preprocessing
-# ============================================================
-def preprocess_audio_fast(filename, max_len=48000):
+# --- Efficient Preprocessing ---
+def preprocess_audio(filename, max_len=48000):
     try:
-        # Fast audio loading
-        wav, sr = sf.read(filename)
-        wav = wav.astype(np.float32)
+        wav, sr = librosa.load(filename, sr=16000, mono=True)
 
-        # Check if the audio is empty
-        if len(wav) == 0:
-            st.error("The audio file is empty.")
-            return None, None, None
-
-        # Resample to 16k if needed
-        if sr != 16000:
-            wav = librosa.resample(wav, orig_sr=sr, target_sr=16000)
-            sr = 16000
-
-        # Pad or trim audio
+        # Pad/Trim
         if len(wav) > max_len:
             wav = wav[:max_len]
         else:
             wav = np.pad(wav, (0, max_len - len(wav)))
 
-        # Fast STFT using TensorFlow
-        stft = tf.signal.stft(
-            wav,
-            frame_length=512,
-            frame_step=256,
-            fft_length=512
-        )
-
-        spec = tf.abs(stft)
-        spec = tf.expand_dims(spec, -1)
-        
-        # Check if the spectrogram is empty
-        if spec.shape[0] == 0 or spec.shape[1] == 0:
-            st.error("The audio processing resulted in an empty spectrogram.")
-            return None, None, None
-
+        # Mel spectrogram
+        spec = np.abs(librosa.stft(wav, n_fft=512, hop_length=256))
+        spec = np.expand_dims(spec, -1)
         spec = tf.image.resize(spec, [128, 128])
-        spec = tf.expand_dims(spec, 0)
+        spec = np.expand_dims(spec, 0)
 
-        return spec.numpy(), wav, sr
-
+        return spec, wav, sr
     except Exception as e:
         st.error(f"Error processing audio: {e}")
         return None, None, None
 
 # --- Predict gender ---
 def predict_gender(path):
-    features, _, _ = preprocess_audio_fast(path)
+    features, _, _ = preprocess_audio(path)
     if features is None:
         return None
     pred = model.predict(features, verbose=0)
     return "👨‍🦱 Male" if pred[0][0] > 0.5 else "👩‍🦰 Female"
 
-# --- Session state keys ---
-for key in ["uploaded_path", "recorded_path", "uploaded_result", "recorded_result", "last_audio"]:
+# --- Session state ---
+for key in ["uploaded_path", "recorded_path", "uploaded_result", "recorded_result"]:
     st.session_state.setdefault(key, None)
 
-# --- UI Header ---
+# --- UI ---
 st.title("🎤 Voice Gender Recognition")
 st.markdown("Detect gender from voice using a deep learning model.")
 
@@ -102,12 +73,12 @@ if uploaded_file:
     
     st.session_state.uploaded_result = predict_gender(st.session_state.uploaded_path)
 
-# ---- Display uploaded prediction ----
+# ---- Display uploaded results ----
 if st.session_state.uploaded_path and st.session_state.uploaded_result:
     st.success(f"Prediction (Uploaded): {st.session_state.uploaded_result}")
 
     try:
-        spec, wav, sr = preprocess_audio_fast(st.session_state.uploaded_path)
+        spec, wav, sr = preprocess_audio(st.session_state.uploaded_path)
 
         fig, ax = plt.subplots(figsize=(8, 2))
         ax.plot(wav)
@@ -119,9 +90,9 @@ if st.session_state.uploaded_path and st.session_state.uploaded_result:
     except Exception as e:
         st.error(f"Error displaying uploaded audio: {e}")
 
-# ---- Remove uploaded file ----
+# ---- Remove uploaded ----
 if st.session_state.uploaded_path:
-    if st.button("🗑 Remove Uploaded File"):
+    if st.button("🗑️ Remove Uploaded File"):
         try:
             if os.path.exists(st.session_state.uploaded_path):
                 os.remove(st.session_state.uploaded_path)
@@ -140,22 +111,19 @@ st.markdown("Click the microphone to start recording.")
 
 audio_bytes = audio_recorder(key="audio_recorder")
 
-# Avoid re-predicting the same audio multiple times
-if audio_bytes and st.session_state.last_audio != audio_bytes:
-    st.session_state.last_audio = audio_bytes
-
+if audio_bytes:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
         tmp.write(audio_bytes)
         st.session_state.recorded_path = tmp.name
 
     st.session_state.recorded_result = predict_gender(st.session_state.recorded_path)
 
-# ---- Display recorded prediction ----
+# ---- Display recorded results ----
 if st.session_state.recorded_path and st.session_state.recorded_result:
     st.success(f"Prediction (Recorded): {st.session_state.recorded_result}")
 
     try:
-        spec, wav, sr = preprocess_audio_fast(st.session_state.recorded_path)
+        spec, wav, sr = preprocess_audio(st.session_state.recorded_path)
 
         fig, ax = plt.subplots(figsize=(8, 2))
         ax.plot(wav)
@@ -167,15 +135,14 @@ if st.session_state.recorded_path and st.session_state.recorded_result:
     except Exception as e:
         st.error(f"Error displaying recorded audio: {e}")
 
-# ---- Remove recorded file ----
+# ---- Remove recording ----
 if st.session_state.recorded_path:
-    if st.button("🗑 Remove Recorded Audio"):
+    if st.button("🗑️ Remove Recorded Audio"):
         try:
             if os.path.exists(st.session_state.recorded_path):
                 os.remove(st.session_state.recorded_path)
             st.session_state.recorded_path = None
             st.session_state.recorded_result = None
-            st.session_state.last_audio = None
             del st.session_state["audio_recorder"]
             st.rerun()
         except Exception as e:
