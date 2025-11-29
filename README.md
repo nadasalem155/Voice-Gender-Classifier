@@ -12,7 +12,7 @@ The model processes audio files, converts them into **spectrograms**, and uses a
 
 ---
 
-## 💫 Streamlit App Features
+## 🎙️ Streamlit App Features
 
 - **Upload or record audio** directly in the browser 🎙️  
 - **Real-time gender prediction** 👨‍🦱👩‍🦰  
