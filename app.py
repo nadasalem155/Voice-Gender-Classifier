@@ -56,7 +56,7 @@ for key in ["uploaded_path", "recorded_path", "uploaded_result", "recorded_resul
 st.sidebar.title("ℹ️ How to Use")
 st.sidebar.markdown("""
 **1️⃣ Upload a file:**  
-- Click on *'Choose an audio file'* 📁  
+- Click on *'Browse files'* 📁  
 - Supported formats: wav, mp3, ogg  
 - Wait a few seconds to get the prediction ✅
 
@@ -77,7 +77,6 @@ st.sidebar.markdown("""
 
 # --- UI ---
 st.title("🎤 Voice Gender Recognition")
-st.markdown("Detect gender from voice using a deep learning model 🧠✨")
 
 # ============================================================
 # Upload Section
