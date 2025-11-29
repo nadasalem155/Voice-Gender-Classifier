@@ -22,6 +22,10 @@ def load_model():
 
 model = load_model()
 
+# === SPEED UP PREDICTION (Warm-up model once) ===
+dummy = np.zeros((1, 128, 128, 1))
+_ = model.predict(dummy, verbose=0)
+
 # --- Efficient Preprocessing ---
 def preprocess_audio(filename, max_len=48000):
     try:
@@ -112,12 +116,12 @@ st.markdown("Click the microphone to start recording.")
 audio_bytes = audio_recorder(key="audio_recorder")
 
 if audio_bytes:
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-        tmp.write(audio_bytes)
-        st.session_state.recorded_path = tmp.name
+    # === SHOW LOADING IMMEDIATELY ===
+    with st.spinner("🔄 Analyzing your voice... Please wait"):
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+            tmp.write(audio_bytes)
+            st.session_state.recorded_path = tmp.name
 
-    # Display a loading message while predicting
-    with st.spinner("Analyzing your recording..."):
         st.session_state.recorded_result = predict_gender(st.session_state.recorded_path)
 
 # ---- Display recorded results ----
