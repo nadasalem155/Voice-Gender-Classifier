@@ -17,7 +17,8 @@ The model processes audio files, converts them into **spectrograms**, and uses a
 - **Upload or record audio** directly in the browser 🎙️  
 - **Real-time gender prediction** 👨‍🦱👩‍🦰  
 - **Waveform visualization** for each audio input 📈  
-- **Remove uploaded or recorded audio** easily 🗑️
+- **Remove uploaded or recorded audio safely** with a single button 🗑️  
+- **Enhanced UI**: hidden internal recorder tag and larger buttons for easier use  
 
 ---
 
@@ -51,28 +52,79 @@ The notebook demonstrates the full workflow:
 5. **Prediction**:
     - Preprocess new audio  
     - Predict gender with the trained CNN  
-    - Output **Male 👨‍🦱** or **Female 👩‍🦰**
+    - Output **👨 Male** or **👩 Female**
 
 ---
 
 ## ⚡ Usage Example (Python)
 
+```python
 import librosa
 import tensorflow as tf
 import numpy as np
 
 # Preprocess audio
-spec = preprocess_audio("path/to/audio.wav")
+spec, wav, sr = preprocess_audio("path/to/audio.wav")
 
 # Predict gender
 pred = model.predict(spec)
-print("Male 👨‍🦱" if pred[0][0] > 0.5 else "Female 👩‍🦰")
+print("👨 Male" if pred[0][0] > 0.5 else "👩 Female")
+
 
 ---
+
 ## 📌 Notes
 
-- The Streamlit app loads the model once for efficiency using @st.cache_resource
+The Streamlit app loads the model once for efficiency using @st.cache_resource.
 
-- Audio files are temporarily stored for processing and can be removed with a button click
+Audio files are temporarily stored for processing and can be removed safely with the 🗑️ button.
 
-- Spectrogram resizing ensures uniform input shape (128x128x1) for CNN
+Waveform colors:
+
+Uploaded audio: #FF6F61
+
+Recorded audio: #4CAF50
+
+
+Quiet environment and a few seconds of speech improve prediction accuracy.
+
+Spectrogram resizing ensures uniform input shape (128x128x1) for CNN.
+
+
+
+---
+
+ℹ️ How to Use (Sidebar)
+
+1️⃣ Upload a file:
+
+Click on 'Browse files' 📁
+
+Supported formats: wav, mp3, ogg
+
+Wait a few seconds to get the prediction ✅
+
+
+2️⃣ Record your voice:
+
+Click the microphone 🎙️
+
+Speak clearly for better results
+
+Wait for analysis ⏳
+
+
+3️⃣ Remove audio:
+
+Use the 🗑️ button to delete uploaded or recorded audio
+
+This will reset the interface
+
+
+Tips:
+
+Quiet environment = more accurate prediction
+
+Speak a few seconds, not just 1 word
+
+Male voice → 👨, Female voice → 👩
